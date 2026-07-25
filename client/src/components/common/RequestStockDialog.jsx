@@ -101,12 +101,12 @@ const RequestStockDialog = ({
     try {
       let dbAction = 'Increase';
       let reasonText = `Stock In via WhatsApp (+${qtyVal} pcs)`;
-      let historyAction = 'Stock';
+      let historyAction = 'Stock In';
 
       if (isMachineDelivery) {
         dbAction = 'No Change';
         reasonText = `Machine Delivery via WhatsApp (${qtyVal} pcs)`;
-        historyAction = 'Delivery';
+        historyAction = 'Delivery (Machine)';
       } else if (isStockDelivery) {
         dbAction = 'Decrease';
         reasonText = `Stock Delivered via WhatsApp (-${qtyVal} pcs)`;
@@ -147,8 +147,8 @@ const RequestStockDialog = ({
       setSnack(isMachineDelivery
         ? `✓ Machine Delivery: ${requestedQty} pcs recorded (Stock unchanged: ${currentStock}).`
         : isStockDelivery
-        ? `✓ Stock Delivery: -${requestedQty} pcs recorded. Stock is now ${newStock}.`
-        : `✓ Stock Received: +${requestedQty} pcs recorded. Stock is now ${newStock}.`
+          ? `✓ Stock Delivery: -${requestedQty} pcs recorded. Stock is now ${newStock}.`
+          : `✓ Stock Received: +${requestedQty} pcs recorded. Stock is now ${newStock}.`
       );
       if (onSuccess) onSuccess();
     } catch (e) {
@@ -247,8 +247,8 @@ const RequestStockDialog = ({
                     isStock
                       ? `After: +${requestedQty} → ${newStock} pcs`
                       : isMachineDelivery
-                      ? `After: ${newStock} pcs (Unchanged)`
-                      : `After: -${requestedQty} → ${newStock} pcs`
+                        ? `After: ${newStock} pcs (Unchanged)`
+                        : `After: -${requestedQty} → ${newStock} pcs`
                   }
                   variant="outlined"
                   color={isStock ? 'success' : isMachineDelivery ? 'info' : 'warning'}
@@ -262,8 +262,8 @@ const RequestStockDialog = ({
                 <>
                   <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>F-COLORS</Typography>
                   <Box sx={{ mt: 0.5, mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.6 }}>
-                    {combination.combination_colors.map(c => (
-                      <Chip key={c.id} size="small" variant="outlined"
+                    {combination.combination_colors.map((c, i) => (
+                      <Chip key={c.id || c.f_number || `color-${i}`} size="small" variant="outlined"
                         label={`${c.f_number}: ${c.color_name}${c.company_name ? ` (${c.company_name})` : ''}`}
                       />
                     ))}

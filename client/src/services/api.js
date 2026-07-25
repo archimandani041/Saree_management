@@ -66,6 +66,7 @@ export const beamAPI = {
 
 // Combination APIs
 export const combinationAPI = {
+  getById: (comboId) => api.get(`/sarees/combinations/${comboId}`),
   add: (beamId, data) => api.post(`/sarees/beams/${beamId}/combinations`, data),
   update: (comboId, data) => api.put(`/sarees/combinations/${comboId}`, data),
   delete: (comboId) => api.delete(`/sarees/combinations/${comboId}`),
@@ -108,6 +109,7 @@ export const stockAPI = {
   rollback: (historyId, data) => api.post(`/stock/rollback/${historyId}`, data),
   getHistory: (params) => api.get('/stock/history', { params }),
   getStats: () => api.get('/stock/stats'),
+  deleteHistory: (historyId) => api.delete(`/stock/history/${historyId}`),
 };
 
 // Dashboard APIs

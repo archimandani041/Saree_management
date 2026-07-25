@@ -16,9 +16,10 @@ import PersonIcon from '@mui/icons-material/Person';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { useNavigate } from 'react-router-dom';
 
-const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, isAdmin }) => {
+const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, onDeleteRecord, onUpdateStock, isAdmin }) => {
   const navigate = useNavigate();
 
   if (!item) return null;
@@ -37,8 +38,9 @@ const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, isAdmin }) => 
   const cName = item.combination_name || item.details?.combination_name || '—';
   const imgUrl = item.image_url || item.details?.image_url;
 
-  const canRollback = !item.is_rolled_back && !item.is_rollback && isAdmin &&
-    ['Stock', 'Stock Delivery', 'Return', 'Damage', 'Manual Adjustment'].includes(item.action);
+  const isRolledBackOrUndo = item.is_rolled_back || item.is_rollback || item.action === 'Undo' || item.action === 'Rollback';
+  const canRollback = !isRolledBackOrUndo && isAdmin &&
+    ['Stock', 'Stock Delivery', 'Return', 'Damage', 'Manual Adjustment', 'Increase', 'Decrease', 'Stock Added', 'Delivery'].includes(item.action);
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ backdrop: { invisible: false } }}>
@@ -169,8 +171,13 @@ const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, isAdmin }) => 
           )}
 
           {/* Navigation Shortcuts */}
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Navigation Shortcuts</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Navigation & Quick Actions</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+            {onUpdateStock && (
+              <Button size="small" variant="contained" sx={{ bgcolor: '#25D366', color: '#fff', fontWeight: 800, '&:hover': { bgcolor: '#16A34A' } }} startIcon={<WhatsAppIcon />} onClick={() => { onClose(); onUpdateStock(item); }}>
+                Update Stock (WhatsApp)
+              </Button>
+            )}
             {sId && (
               <Button size="small" variant="outlined" startIcon={<OpenInNewIcon />} onClick={() => navigate(`/sarees/${sId}`)}>
                 Open Saree {sCode}
@@ -187,10 +194,21 @@ const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, isAdmin }) => 
               fullWidth
               variant="contained"
               color="error"
-              startIcon={<RotateLeftIcon />}
+              startIcon={<DeleteOutlinedIcon />}
               onClick={() => onRollback(item)}
             >
-              Rollback Event
+              Delete / Rollback Event
+            </Button>
+          )}
+          {isAdmin && isRolledBackOrUndo && (
+            <Button
+              fullWidth
+              variant="contained"
+              color="error"
+              startIcon={<DeleteOutlinedIcon />}
+              onClick={() => onDeleteRecord(item)}
+            >
+              Delete History Record
             </Button>
           )}
           <Button fullWidth variant="outlined" onClick={onClose}>Close</Button>

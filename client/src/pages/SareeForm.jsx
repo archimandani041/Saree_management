@@ -64,69 +64,76 @@ const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemov
 
   return (
     <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: 'background.default' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-        <Chip label={`Combination ${comboIndex + 1}`} size="small" color="primary" variant="outlined" />
-        <Box>
-          <Tooltip title="Delete Combination"><IconButton size="small" color="error" onClick={() => onRemove(comboIndex)}>
-            <DeleteIcon fontSize="small" />
-          </IconButton></Tooltip>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2.5, alignItems: 'flex-start' }}>
+        {/* Left side: Medium size image box (same as edit saree section) */}
+        <Box sx={{ width: { xs: '100%', sm: 180, md: 220 }, flexShrink: 0 }}>
+          <CombinationImageUpload
+            imageUrl={combo._imagePreview || ''}
+            onUploaded={(_, file) => {
+              // file is the raw File object in add mode
+              const preview = file ? URL.createObjectURL(file) : null;
+              onUpdate(comboIndex, { ...combo, _pendingImageFile: file, _imagePreview: preview || '' });
+            }}
+            onDeleted={() => {
+              onUpdate(comboIndex, { ...combo, _pendingImageFile: null, _imagePreview: '' });
+            }}
+            isAdmin
+          />
+        </Box>
+
+        {/* Right side: Combination header and form fields */}
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Chip label={`Combination ${comboIndex + 1}`} size="small" color="primary" variant="outlined" />
+            <Box>
+              <Tooltip title="Delete Combination">
+                <IconButton size="small" color="error" onClick={() => onRemove(comboIndex)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
+
+          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
+            <Grid size={{ xs: 6, sm: 3 }}>
+              <TextField size="small" fullWidth type="number" label="Stock" value={combo.current_stock}
+                onChange={e => onUpdate(comboIndex, { ...combo, current_stock: e.target.value })}
+                slotProps={{ htmlInput: { min: 0 } }} />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={combo.status || 'In Stock'}
+                  label="Status"
+                  onChange={e => onUpdate(comboIndex, { ...combo, status: e.target.value })}
+                >
+                  <MenuItem value="In Stock">In Stock</MenuItem>
+                  <MenuItem value="In Delivery">In Delivery</MenuItem>
+                  <MenuItem value="Out of Stock">Out of Stock</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 5 }}>
+              <TextField size="small" fullWidth label="Notes (optional)" value={combo.notes || ''}
+                onChange={e => onUpdate(comboIndex, { ...combo, notes: e.target.value })} />
+            </Grid>
+          </Grid>
+
+          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5, display: 'block' }}>
+            F-Colors
+          </Typography>
+          {combo.colors.map((color, ci) => {
+            const isDuplicateColor = combo.colors.some((c, idx) => idx !== ci && c.f_number.trim().toUpperCase() === color.f_number.trim().toUpperCase());
+            return (
+              <ColorRow key={ci} color={color} index={ci} onChange={handleColorChange} onRemove={removeColor} isDuplicate={isDuplicateColor} />
+            );
+          })}
+          <Button size="small" startIcon={<AddIcon />} onClick={addColor} sx={{ mt: 0.5 }}>
+            Add Color Row
+          </Button>
         </Box>
       </Box>
-
-      {/* Per-combination image upload (compact — stores file locally until save) */}
-      <Box sx={{ mb: 1.5 }}>
-        <CombinationImageUpload
-          compact
-          imageUrl={combo._imagePreview || ''}
-          onUploaded={(_, file) => {
-            // file is the raw File object in compact/add mode
-            const preview = file ? URL.createObjectURL(file) : null;
-            onUpdate(comboIndex, { ...combo, _pendingImageFile: file, _imagePreview: preview || '' });
-          }}
-          onDeleted={() => {
-            onUpdate(comboIndex, { ...combo, _pendingImageFile: null, _imagePreview: '' });
-          }}
-          isAdmin
-        />
-      </Box>
-
-      <Grid container spacing={2} sx={{ mb: 1.5 }}>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <TextField size="small" fullWidth type="number" label="Stock" value={combo.current_stock}
-            onChange={e => onUpdate(comboIndex, { ...combo, current_stock: e.target.value })}
-            slotProps={{ htmlInput: { min: 0 } }} />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={combo.status || 'In Stock'}
-              label="Status"
-              onChange={e => onUpdate(comboIndex, { ...combo, status: e.target.value })}
-            >
-              <MenuItem value="In Stock">In Stock</MenuItem>
-              <MenuItem value="In Delivery">In Delivery</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 5 }}>
-          <TextField size="small" fullWidth label="Notes (optional)" value={combo.notes || ''}
-            onChange={e => onUpdate(comboIndex, { ...combo, notes: e.target.value })} />
-        </Grid>
-      </Grid>
-
-      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5, display: 'block' }}>
-        F-Colors
-      </Typography>
-      {combo.colors.map((color, ci) => {
-        const isDuplicateColor = combo.colors.some((c, idx) => idx !== ci && c.f_number.trim().toUpperCase() === color.f_number.trim().toUpperCase());
-        return (
-          <ColorRow key={ci} color={color} index={ci} onChange={handleColorChange} onRemove={removeColor} isDuplicate={isDuplicateColor} />
-        );
-      })}
-      <Button size="small" startIcon={<AddIcon />} onClick={addColor} sx={{ mt: 0.5 }}>
-        Add Color Row
-      </Button>
     </Paper>
   );
 };

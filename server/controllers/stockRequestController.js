@@ -129,6 +129,14 @@ const updateRequestStatus = async (req, res) => {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
+    // Fetch existing request first to check previous status
+    const { data: existingReq } = await supabase
+      .from('stock_requests')
+      .select('*')
+      .eq('id', id)
+      .eq('owner_id', req.user.owner_id)
+      .single();
+
     const updateData = { status, updated_at: new Date().toISOString() };
     if (notes !== undefined) updateData.notes = notes;
 
@@ -142,6 +150,58 @@ const updateRequestStatus = async (req, res) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Request not found' });
+
+    // If status transitioned to Received, update combination stock and log stock_history
+    if (status === 'Received' && existingReq?.status !== 'Received' && data.combination_id) {
+      const { data: combo } = await supabase
+        .from('combinations')
+        .select('current_stock, combination_name, beam_id, beams(saree_id, beam_name)')
+        .eq('id', data.combination_id)
+        .single();
+
+      if (combo) {
+        const oldStock = combo.current_stock ?? 0;
+        const qty = data.requested_qty || 0;
+        const isDelivery = data.notes?.startsWith('DELIVERY_OUT');
+        const newStock = isDelivery ? Math.max(0, oldStock - qty) : (oldStock + qty);
+
+        await supabase
+          .from('combinations')
+          .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+          .eq('id', data.combination_id);
+
+        const dbAction = isDelivery ? 'Decrease' : 'Increase';
+        const historyAction = isDelivery ? 'Stock Delivery' : 'Stock In';
+        const sareeId = data.saree_id || combo.beams?.saree_id || null;
+
+        await supabase.from('stock_history').insert({
+          saree_id: sareeId,
+          combination_id: data.combination_id,
+          beam_name: data.beam_name || combo.beams?.beam_name || 'Beam',
+          combination_name: data.combination_name || combo.combination_name || 'Combination',
+          old_stock: oldStock,
+          new_stock: newStock,
+          action: dbAction,
+          reason: JSON.stringify({
+            sari_number: data.series_code || 'UNKNOWN',
+            beam_name: data.beam_name || 'UNKNOWN',
+            combination_name: data.combination_name || 'Combination',
+            action: historyAction,
+            action_detail: 'Stock Request Marked as Received',
+            opening_stock: oldStock,
+            quantity_changed: isDelivery ? -qty : qty,
+            closing_stock: newStock,
+            reason_category: 'Stock Request Fulfillment',
+            remarks: notes || data.whatsapp_message || '',
+            user_name: req.user.full_name || req.user.username || 'System'
+          }),
+          changed_by: req.user.id || null,
+          changed_by_name: req.user.full_name || req.user.username || 'System',
+          owner_id: req.user.owner_id
+        });
+      }
+    }
+
     res.json({ request: data });
   } catch (error) {
     console.error('UpdateRequestStatus error:', error);

@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   getSarees, getSareeById, createSaree, updateSaree, deleteSaree, nextSeries,
   addBeam, updateBeam, deleteBeam,
-  addCombination, updateCombination, deleteCombination, advancedSearch, setSeries
+  addCombination, getCombinationById, updateCombination, deleteCombination, advancedSearch, setSeries
 } = require('../controllers/sareeController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -19,6 +19,7 @@ router.delete('/beams/:beamId', authenticate, authorize('admin', 'staff'), delet
 router.post('/beams/:beamId/combinations', authenticate, authorize('admin', 'staff'), addCombination);
 
 // Combination routes (by comboId)
+router.get('/combinations/:comboId', authenticate, getCombinationById);
 router.put('/combinations/:comboId', authenticate, authorize('admin', 'staff'), updateCombination);
 router.delete('/combinations/:comboId', authenticate, authorize('admin', 'staff'), deleteCombination);
 

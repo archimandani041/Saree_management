@@ -195,6 +195,7 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, s
                 >
                   <MenuItem value="In Stock">In Stock</MenuItem>
                   <MenuItem value="In Delivery">In Delivery</MenuItem>
+                  <MenuItem value="Out of Stock">Out of Stock</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

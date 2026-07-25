@@ -279,12 +279,21 @@ const SareeDetail = () => {
         <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
             <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>Beams & Combinations</Typography>
-            {saree.beams?.map((beam, bi) => (
-              <Box key={beam.id} sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>{beam.beam_name}</Typography>
-                <Grid container spacing={2}>
-                  {beam.combinations?.map((c, ci) => {
-                    const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
+            {(() => {
+              const naturalSort = (a, b) => (a || '').localeCompare(b || '', undefined, { numeric: true, sensitivity: 'base' });
+              const sortedBeams = [...(saree.beams || [])].sort((a, b) =>
+                (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.beam_name, b.beam_name)
+              );
+              return sortedBeams.map((beam, bi) => {
+                const sortedCombos = [...(beam.combinations || [])].sort((a, b) =>
+                  (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.combination_name, b.combination_name)
+                );
+                return (
+                  <Box key={beam.id} sx={{ mb: 3 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>{beam.beam_name}</Typography>
+                    <Grid container spacing={2}>
+                      {sortedCombos.map((c, ci) => {
+                        const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
                     return (
                       <Grid size={12} key={c.id}>
                         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: isLow ? 'warning.light' : 'divider' }}>
@@ -370,9 +379,11 @@ const SareeDetail = () => {
                     );
                   })}
                 </Grid>
-                {bi < saree.beams.length - 1 && <Divider sx={{ mt: 2 }} />}
+                {bi < sortedBeams.length - 1 && <Divider sx={{ mt: 2 }} />}
               </Box>
-            ))}
+            );
+          });
+        })()}
           </Paper>
         </Grid>
       </Grid>

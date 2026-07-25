@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { stockAPI, sareeAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import InventoryLedgerDrawer from '../components/common/InventoryLedgerDrawer';
+import RequestStockDialog from '../components/common/RequestStockDialog';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TablePagination, Typography, FormControl, Select,
@@ -30,30 +31,42 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import PrintIcon from '@mui/icons-material/Print';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
 
 // Action badges and colors configuration for 20 event types
 const ACTION_BADGES = {
-  'Stock':                   { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
-  'Stock Delivery':          { label: 'STOCK DELIVERY', bg: '#FFEDD5', color: '#C2410C' },
-  'Delivery':                { label: 'DELIVERY (MACHINE)', bg: '#DBEAFE', color: '#1D4ED8' },
-  'Return':                  { label: 'RETURN', bg: '#F3E8FF', color: '#7E22CE' },
-  'Damage':                  { label: 'DAMAGE', bg: '#FEE2E2', color: '#DC2626' },
-  'Transfer':                { label: 'TRANSFER', bg: '#E0F2FE', color: '#0369A1' },
-  'Manual Adjustment':       { label: 'ADJUSTMENT', bg: '#FEF9C3', color: '#A16207' },
-  'WhatsApp Import':         { label: 'WA IMPORT', bg: '#DCFCE7', color: '#16A34A' },
-  'WhatsApp Stock Request':  { label: 'WA REQUEST', bg: '#DCFCE7', color: '#16A34A' },
-  'Purchase Request Created':{ label: 'PURCHASE REQ', bg: '#DBEAFE', color: '#1D4ED8' },
-  'Purchase Received':       { label: 'PURCHASE REC', bg: '#DCFCE7', color: '#15803D' },
-  'Combination Created':     { label: 'COMBO CREATE', bg: '#DBEAFE', color: '#1D4ED8' },
-  'Combination Edited':      { label: 'COMBO EDIT', bg: '#FEF9C3', color: '#A16207' },
-  'Combination Deleted':     { label: 'COMBO DELETE', bg: '#FEE2E2', color: '#DC2626' },
-  'Image Uploaded':          { label: 'IMG UPLOAD', bg: '#DBEAFE', color: '#1D4ED8' },
-  'Image Replaced':          { label: 'IMG REPLACE', bg: '#FEF9C3', color: '#A16207' },
-  'Image Deleted':           { label: 'IMG DELETE', bg: '#FEE2E2', color: '#DC2626' },
-  'Rollback':                { label: 'ROLLBACK', bg: '#F3F4F6', color: '#4B5563' },
-  'Import Failed':           { label: 'IMPORT FAIL', bg: '#FEE2E2', color: '#DC2626' },
-  'Duplicate Updated':       { label: 'DUP UPDATE', bg: '#FFEDD5', color: '#C2410C' },
+  'Stock In': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
+  'Stock': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
+  'Increase': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
+  'Stock Added': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
+
+  'Stock Delivery': { label: 'STOCK DELIVERY', bg: '#FFEDD5', color: '#C2410C' },
+  'Decrease': { label: 'STOCK DELIVERY', bg: '#FFEDD5', color: '#C2410C' },
+
+  'Delivery (Machine)': { label: 'DELIVERY (MACHINE)', bg: '#DBEAFE', color: '#1D4ED8' },
+  'Delivery': { label: 'DELIVERY (MACHINE)', bg: '#DBEAFE', color: '#1D4ED8' },
+  'Delivery Machine': { label: 'DELIVERY (MACHINE)', bg: '#DBEAFE', color: '#1D4ED8' },
+
+  'Return': { label: 'RETURN', bg: '#F3E8FF', color: '#7E22CE' },
+  'Damage': { label: 'DAMAGE', bg: '#FEE2E2', color: '#DC2626' },
+  'Transfer': { label: 'TRANSFER', bg: '#E0F2FE', color: '#0369A1' },
+  'Manual Adjustment': { label: 'ADJUSTMENT', bg: '#FEF9C3', color: '#A16207' },
+  'Manual Edit': { label: 'ADJUSTMENT', bg: '#FEF9C3', color: '#A16207' },
+  'WhatsApp Import': { label: 'WA IMPORT', bg: '#DCFCE7', color: '#16A34A' },
+  'WhatsApp Stock Request': { label: 'WA REQUEST', bg: '#DCFCE7', color: '#16A34A' },
+  'Purchase Request Created': { label: 'PURCHASE REQ', bg: '#DBEAFE', color: '#1D4ED8' },
+  'Purchase Received': { label: 'PURCHASE REC', bg: '#DCFCE7', color: '#15803D' },
+  'Combination Created': { label: 'COMBO CREATE', bg: '#DBEAFE', color: '#1D4ED8' },
+  'Combination Edited': { label: 'COMBO EDIT', bg: '#FEF9C3', color: '#A16207' },
+  'Combination Deleted': { label: 'COMBO DELETE', bg: '#FEE2E2', color: '#DC2626' },
+  'Image Uploaded': { label: 'IMG UPLOAD', bg: '#DBEAFE', color: '#1D4ED8' },
+  'Image Replaced': { label: 'IMG REPLACE', bg: '#FEF9C3', color: '#A16207' },
+  'Image Deleted': { label: 'IMG DELETE', bg: '#FEE2E2', color: '#DC2626' },
+  'Rollback': { label: 'ROLLBACK', bg: '#F3F4F6', color: '#4B5563' },
+  'Undo': { label: 'ROLLBACK', bg: '#F3F4F6', color: '#4B5563' },
+  'Import Failed': { label: 'IMPORT FAIL', bg: '#FEE2E2', color: '#DC2626' },
+  'Duplicate Updated': { label: 'DUP UPDATE', bg: '#FFEDD5', color: '#C2410C' },
 };
 
 const StockHistory = () => {
@@ -75,13 +88,58 @@ const StockHistory = () => {
     todayReturns: 0, todayDamage: 0, todayRollbacks: 0
   });
 
-  // Drawer & Rollback state
+  // Drawer, Rollback & Delete state
   const [selectedDrawerItem, setSelectedDrawerItem] = useState(null);
   const [rollbackModalOpen, setRollbackModalOpen] = useState(false);
   const [targetRollbackItem, setTargetRollbackItem] = useState(null);
   const [rollbackReasonInput, setRollbackReasonInput] = useState('Admin Audit Rollback');
   const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [deleteRecordModalOpen, setDeleteRecordModalOpen] = useState(false);
+  const [targetDeleteItem, setTargetDeleteItem] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [snack, setSnack] = useState('');
+
+  // Request Stock via WhatsApp state
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestCombo, setRequestCombo] = useState(null);
+  const [requestBeamName, setRequestBeamName] = useState('');
+  const [requestSeriesCode, setRequestSeriesCode] = useState('');
+  const [requestSareeId, setRequestSareeId] = useState(null);
+
+  const handleOpenRequestStock = async (item) => {
+    if (!item?.combination_id) return;
+
+    try {
+      const { data } = await combinationAPI.getById(item.combination_id);
+      if (data?.combination) {
+        const combo = data.combination;
+        setRequestCombo({
+          ...combo,
+          brand: combo.brand || combo.beams?.sarees?.brand || 'KP'
+        });
+        setRequestBeamName(combo.beams?.beam_name || item.beam_name || 'Beam');
+        setRequestSeriesCode(combo.beams?.sarees?.series_code || item.sarees?.series_code || item.series_code || 'Saree');
+        setRequestSareeId(combo.beams?.saree_id || item.saree_id);
+        setRequestDialogOpen(true);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback using populated join item
+    const comboData = {
+      id: item.combination_id,
+      combination_name: item.combination_name || 'Combination',
+      current_stock: item.combinations?.current_stock ?? item.new_stock ?? 0,
+      minimum_stock: item.combinations?.minimum_stock ?? 20,
+      combination_colors: item.combinations?.combination_colors || [],
+      brand: item.combinations?.brand || item.sarees?.brand || 'KP'
+    };
+    setRequestCombo(comboData);
+    setRequestBeamName(item.beam_name || 'Beam');
+    setRequestSeriesCode(item.sarees?.series_code || item.series_code || 'Saree');
+    setRequestSareeId(item.saree_id);
+    setRequestDialogOpen(true);
+  };
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 350);
@@ -92,7 +150,7 @@ const StockHistory = () => {
     try {
       const { data } = await stockAPI.getStats();
       setStats(data);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const fetchHistory = useCallback(async () => {
@@ -131,6 +189,23 @@ const StockHistory = () => {
       setSnack(err.response?.data?.error || 'Failed to rollback transaction.');
     } finally {
       setRollbackLoading(false);
+    }
+  };
+
+  const handleExecuteDeleteRecord = async () => {
+    if (!targetDeleteItem) return;
+    setDeleteLoading(true);
+    try {
+      const res = await stockAPI.deleteHistory(targetDeleteItem.id);
+      setSnack(res.data?.message || 'History record deleted.');
+      setDeleteRecordModalOpen(false);
+      setTargetDeleteItem(null);
+      fetchHistory();
+      fetchStats();
+    } catch (err) {
+      setSnack(err.response?.data?.error || 'Failed to delete history record.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -211,40 +286,22 @@ const StockHistory = () => {
 
       {/* Top Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+        <Grid size={{ xs: 12, sm: 4, md: 4 }}>
           <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S STOCK ADDED</Typography>
             <Typography variant="h5" sx={{ fontWeight: 800, color: 'success.main', mt: 0.5 }}>+{stats.todayStockAdded}</Typography>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+        <Grid size={{ xs: 12, sm: 4, md: 4 }}>
           <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S DELIVERIES</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S MACHINE DELIVERY</Typography>
             <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main', mt: 0.5 }}>{stats.todayDeliveries}</Typography>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+        <Grid size={{ xs: 12, sm: 4, md: 4 }}>
           <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>STOCK DELIVERIES</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S DELIVERY</Typography>
             <Typography variant="h5" sx={{ fontWeight: 800, color: 'error.main', mt: 0.5 }}>-{stats.todayStockDeliveries}</Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 2 }}>
-          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>RETURNS</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#7E22CE', mt: 0.5 }}>+{stats.todayReturns}</Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 2 }}>
-          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>DAMAGE</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'error.main', mt: 0.5 }}>{stats.todayDamage}</Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 2 }}>
-          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>ROLLBACKS</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.secondary', mt: 0.5 }}>{stats.todayRollbacks}</Typography>
           </Paper>
         </Grid>
       </Grid>
@@ -267,18 +324,12 @@ const StockHistory = () => {
               }
             }}
           />
-          <FormControl size="small" sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: 220 }}>
             <Select value={action} onChange={e => { setAction(e.target.value); setPage(0); }}>
-              <MenuItem value="all">All Action Events (20 Types)</MenuItem>
-              <MenuItem value="Stock">Stock In</MenuItem>
+              <MenuItem value="all">All Action Events</MenuItem>
+              <MenuItem value="Stock In">Stock In</MenuItem>
               <MenuItem value="Stock Delivery">Stock Delivery</MenuItem>
-              <MenuItem value="Delivery">Delivery (Machine)</MenuItem>
-              <MenuItem value="Return">Return</MenuItem>
-              <MenuItem value="Damage">Damage</MenuItem>
-              <MenuItem value="WhatsApp Import">WhatsApp Import</MenuItem>
-              <MenuItem value="Combination Created">Combination Created</MenuItem>
-              <MenuItem value="Image Uploaded">Image Uploaded</MenuItem>
-              <MenuItem value="Rollback">Rollbacks</MenuItem>
+              <MenuItem value="Delivery (Machine)">Delivery (Machine)</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -292,19 +343,18 @@ const StockHistory = () => {
             <Table size="small">
               <TableHead sx={{ bgcolor: 'background.default' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800 }}>Tx ID / Date</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Saree & Image</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Beam / Combination</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Action Event</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Stock Movement</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Metadata (User/Machine/Supplier)</TableCell>
                   <TableCell sx={{ fontWeight: 800 }} align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {history.length === 0 && !loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                       <Typography color="text.secondary">No ledger records match your search.</Typography>
                     </TableCell>
                   </TableRow>
@@ -315,9 +365,6 @@ const StockHistory = () => {
                   return (
                     <TableRow key={item.id} hover sx={{ opacity: isRolledBack ? 0.6 : 1 }}>
                       <TableCell>
-                        <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 800, color: 'primary.main', display: 'block' }}>
-                          #{item.id?.slice(0, 8)}
-                        </Typography>
                         <Typography variant="caption" sx={{ fontWeight: 700 }}>
                           {new Date(item.created_at).toLocaleDateString()}
                         </Typography>
@@ -355,28 +402,33 @@ const StockHistory = () => {
                         </Typography>
                       </TableCell>
 
-                      <TableCell>
-                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 700 }}>
-                          User: {item.changed_by_name || 'System'}
-                        </Typography>
-                        {item.machine_name && (
-                          <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
-                            Machine: {item.machine_name}
-                          </Typography>
-                        )}
-                      </TableCell>
-
                       <TableCell align="center">
-                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center' }}>
                           <Tooltip title="View Drawer Details">
                             <IconButton size="small" onClick={() => setSelectedDrawerItem(item)}>
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          {isAdmin && !isRolledBack && (
-                            <Tooltip title="Rollback Transaction">
-                              <IconButton size="small" color="error" onClick={() => { setTargetRollbackItem(item); setRollbackModalOpen(true); }}>
-                                <RotateLeftIcon fontSize="small" />
+                          <Tooltip title="Update Stock via WhatsApp">
+                            <IconButton
+                              size="small"
+                              sx={{ color: '#25D366', '&:hover': { bgcolor: '#DCFCE7' } }}
+                              onClick={() => handleOpenRequestStock(item)}
+                            >
+                              <WhatsAppIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {isAdmin && (
+                            <Tooltip title="Delete History Record">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => {
+                                  setTargetDeleteItem(item);
+                                  setDeleteRecordModalOpen(true);
+                                }}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
@@ -426,10 +478,16 @@ const StockHistory = () => {
         onClose={() => setSelectedDrawerItem(null)}
         item={selectedDrawerItem}
         isAdmin={isAdmin}
+        onUpdateStock={handleOpenRequestStock}
         onRollback={(item) => {
           setSelectedDrawerItem(null);
           setTargetRollbackItem(item);
           setRollbackModalOpen(true);
+        }}
+        onDeleteRecord={(item) => {
+          setSelectedDrawerItem(null);
+          setTargetDeleteItem(item);
+          setDeleteRecordModalOpen(true);
         }}
       />
 
@@ -455,6 +513,41 @@ const StockHistory = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete Record Dialog */}
+      <Dialog open={deleteRecordModalOpen} onClose={() => setDeleteRecordModalOpen(false)}>
+        <DialogTitle sx={{ color: 'error.main', fontWeight: 800 }}>Rollback & Delete History Record</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Are you sure you want to delete this history record?
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            Deleting this entry will automatically revert all stock changes made by this transaction and permanently delete the record from the ledger.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteRecordModalOpen(false)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleExecuteDeleteRecord} disabled={deleteLoading}>
+            Rollback & Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Request Stock / Stock Movement via WhatsApp Dialog */}
+      <RequestStockDialog
+        open={requestDialogOpen}
+        onClose={() => setRequestDialogOpen(false)}
+        combination={requestCombo}
+        beamName={requestBeamName}
+        seriesCode={requestSeriesCode}
+        sareeId={requestSareeId}
+        onSuccess={() => {
+          fetchHistory();
+          fetchStats();
+          setRequestDialogOpen(false);
+          setSnack('Stock updated successfully via WhatsApp!');
+        }}
+      />
     </Box>
   );
 };

@@ -237,6 +237,8 @@ const AllSarees = () => {
     return highlightText(text, matchTerm);
   };
 
+  const naturalSort = (a, b) => (a || '').localeCompare(b || '', undefined, { numeric: true, sensitivity: 'base' });
+
   const getFilteredHierarchy = (saree) => {
     const query = debouncedSearch?.toLowerCase().trim();
     const companyQ = debouncedCompany?.toLowerCase().trim();
@@ -247,7 +249,14 @@ const AllSarees = () => {
     const hasFilters = !!(query || companyQ || colorQ || brandQ || statusQ);
 
     if (!hasFilters) {
-      return saree.beams || [];
+      return [...(saree.beams || [])]
+        .map(beam => ({
+          ...beam,
+          combinations: [...(beam.combinations || [])].sort((a, b) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.combination_name, b.combination_name)
+          )
+        }))
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.beam_name, b.beam_name));
     }
 
     const matchedBeams = [];
@@ -299,6 +308,9 @@ const AllSarees = () => {
       }
 
       if (matchedCombinations.length > 0 || beamNameMatch) {
+        matchedCombinations.sort((a, b) =>
+          (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.combination_name, b.combination_name)
+        );
         matchedBeams.push({
           ...beam,
           combinations: matchedCombinations
@@ -306,7 +318,9 @@ const AllSarees = () => {
       }
     }
 
-    return matchedBeams;
+    return matchedBeams.sort((a, b) =>
+      (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.beam_name, b.beam_name)
+    );
   };
 
   const fetchSarees = useCallback(async () => {
@@ -533,6 +547,7 @@ const AllSarees = () => {
                 <MenuItem value="">All Statuses</MenuItem>
                 <MenuItem value="In Stock">In Stock</MenuItem>
                 <MenuItem value="In Delivery">In Delivery</MenuItem>
+                <MenuItem value="Out of Stock">Out of Stock</MenuItem>
               </Select>
             </FormControl>
           </Grid>

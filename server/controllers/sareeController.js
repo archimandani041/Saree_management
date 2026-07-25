@@ -163,14 +163,28 @@ const getSarees = async (req, res) => {
     console.timeEnd(`getSarees-MainQuery-${ownerId}`);
     if (error) throw error;
 
-    // Compute total stock per saree + apply status filter in JS
+    const naturalSort = (a, b) => (a || '').localeCompare(b || '', undefined, { numeric: true, sensitivity: 'base' });
+
+    // Compute total stock per saree + naturally sort beams/combinations + apply status filter in JS
     let sarees = (data || []).map(s => {
-      const totalStock = (s.beams || []).reduce((bSum, beam) =>
+      const sortedBeams = (s.beams || [])
+        .map(beam => ({
+          ...beam,
+          combinations: (beam.combinations || [])
+            .map(combo => ({
+              ...combo,
+              combination_colors: (combo.combination_colors || []).sort((a, b) => (a.f_number || 0) - (b.f_number || 0))
+            }))
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.combination_name, b.combination_name))
+        }))
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.beam_name, b.beam_name));
+
+      const totalStock = sortedBeams.reduce((bSum, beam) =>
         bSum + (beam.combinations || []).reduce((cSum, c) => cSum + (c.current_stock || 0), 0), 0
       );
-      const allCombos = (s.beams || []).flatMap(beam => beam.combinations || []);
+      const allCombos = sortedBeams.flatMap(beam => beam.combinations || []);
       const hasLowStockCombo = allCombos.some(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20));
-      const minStock = (s.beams || []).reduce((min, beam) =>
+      const minStock = sortedBeams.reduce((min, beam) =>
         Math.min(min, ...(beam.combinations || []).map(c => c.minimum_stock || 20)), 20
       );
       return { ...s, total_stock: totalStock, min_stock: minStock, has_low_stock_combo: hasLowStockCombo };
@@ -223,11 +237,12 @@ const getSareeById = async (req, res) => {
 
     if (error || !saree) return res.status(404).json({ error: 'Saree not found' });
 
-    // Sort nested arrays
-    saree.beams?.sort((a, b) => a.sort_order - b.sort_order);
+    // Sort nested arrays naturally
+    const naturalSortHelper = (a, b) => (a || '').localeCompare(b || '', undefined, { numeric: true, sensitivity: 'base' });
+    saree.beams?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSortHelper(a.beam_name, b.beam_name));
     saree.beams?.forEach(beam => {
-      beam.combinations?.sort((a, b) => a.sort_order - b.sort_order);
-      beam.combinations?.forEach(c => c.combination_colors?.sort((a, b) => a.sort_order - b.sort_order));
+      beam.combinations?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSortHelper(a.combination_name, b.combination_name));
+      beam.combinations?.forEach(c => c.combination_colors?.sort((a, b) => (a.f_number || 0) - (b.f_number || 0)));
     });
 
     const { data: history } = await supabase
@@ -603,7 +618,7 @@ const setSeries = async (req, res) => {
   try {
     const { id } = req.params;
     const { series_letter } = req.body;
-    
+
     if (!series_letter || series_letter.length !== 1 || series_letter < 'A' || series_letter > 'Z') {
       return res.status(400).json({ error: 'Invalid series letter. Must be between A and Z.' });
     }
@@ -843,7 +858,7 @@ const updateCombination = async (req, res) => {
     const { combination_name, current_stock, minimum_stock, notes, colors, status, brand } = req.body;
 
     const { data: old } = await supabase
-      .from('combinations').select('*, beams(saree_id, beam_name, id)').eq('id', comboId).single();
+      .from('combinations').select('*, beams(saree_id, beam_name, id, sarees(series_code, sari_name))').eq('id', comboId).single();
     if (!old) return res.status(404).json({ error: 'Combination not found' });
     if (old.owner_id && old.owner_id !== req.user.owner_id) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -890,42 +905,65 @@ const updateCombination = async (req, res) => {
 
     // Log stock change
     const historyAction = req.body.history_action || req.body.action || 'Manual Edit';
-    const isStockChanged = current_stock !== undefined && parseInt(current_stock) !== old.current_stock;
-    const hasExplicitHistory = Boolean(req.body.history_action || (req.body.action && req.body.action !== 'Manual Edit'));
+    const isStockChanged = current_stock !== undefined;
 
-    if (isStockChanged || hasExplicitHistory) {
-      const sareeId = old.beams?.saree_id;
+    if (isStockChanged || req.body.history_action || req.body.action || req.body.quantity !== undefined) {
+      let sareeId = old.beams?.saree_id;
+      let seriesCode = old.beams?.sarees?.series_code || 'UNKNOWN';
 
-      await supabase.from('stock_history').insert({
+      if (!sareeId && old.beam_id) {
+        const { data: bData } = await supabase.from('beams').select('saree_id, sarees(series_code)').eq('id', old.beam_id).single();
+        if (bData) {
+          sareeId = bData.saree_id;
+          seriesCode = bData.sarees?.series_code || 'UNKNOWN';
+        }
+      }
+
+      const oldStock = old.current_stock ?? 0;
+      const newStockVal = current_stock !== undefined ? parseInt(current_stock) : oldStock;
+
+      const dbAction = (historyAction === 'Delivery' || historyAction === 'Delivery (Machine)' || historyAction === 'Delivery Machine' || historyAction === 'No Change')
+        ? 'Manual Edit'
+        : (historyAction === 'Stock Delivery' || historyAction === 'Decrease')
+          ? 'Decrease'
+          : 'Increase';
+
+      const { error: histErr } = await supabase.from('stock_history').insert({
         saree_id: sareeId,
         combination_id: comboId,
-        beam_name: old.beams?.beam_name,
+        beam_name: old.beams?.beam_name || 'Beam',
         combination_name: old.combination_name || 'Combination',
-        old_stock: old.current_stock,
-        new_stock: current_stock !== undefined ? parseInt(current_stock) : old.current_stock,
-        action: historyAction === 'Stock' || historyAction === 'Increase' ? 'Increase' : (historyAction === 'Stock Delivery' || historyAction === 'Decrease' ? 'Decrease' : 'Manual Edit'),
+        old_stock: oldStock,
+        new_stock: newStockVal,
+        action: dbAction,
         reason: JSON.stringify({
-          sari_number: old.beams?.sarees?.series_code || 'UNKNOWN',
+          sari_number: seriesCode,
           beam_name: old.beams?.beam_name || 'UNKNOWN',
           combination_name: old.combination_name || 'Combination',
           action: historyAction,
           action_detail: historyAction,
-          opening_stock: old.current_stock,
+          opening_stock: oldStock,
           quantity_changed: (historyAction === 'Stock Delivery' || historyAction === 'Decrease')
-            ? -(req.body.quantity !== undefined ? parseInt(req.body.quantity) : Math.abs((current_stock !== undefined ? parseInt(current_stock) : old.current_stock) - old.current_stock))
-            : (req.body.quantity !== undefined ? parseInt(req.body.quantity) : Math.abs((current_stock !== undefined ? parseInt(current_stock) : old.current_stock) - old.current_stock)),
-          closing_stock: current_stock !== undefined ? parseInt(current_stock) : old.current_stock,
+            ? -(req.body.quantity !== undefined ? parseInt(req.body.quantity) : Math.abs(newStockVal - oldStock))
+            : (req.body.quantity !== undefined ? parseInt(req.body.quantity) : Math.abs(newStockVal - oldStock)),
+          closing_stock: newStockVal,
           reason_category: historyAction,
-          remarks: req.body.reason || '',
+          remarks: req.body.reason || req.body.whatsapp_message || '',
+          whatsapp_message: req.body.whatsapp_message || null,
           user_name: req.user.full_name || req.user.username || 'System'
         }),
-        changed_by: req.user.id,
-        changed_by_name: req.user.full_name,
+        changed_by: req.user.id || null,
+        changed_by_name: req.user.full_name || req.user.username || 'System',
         owner_id: req.user.owner_id
       });
+
+      if (histErr) {
+        console.error('CRITICAL: Stock history insert failed:', histErr);
+      }
+
       await logActivity(req.user, 'UPDATE_STOCK', 'combination', comboId, {
         beam: old.beams?.beam_name, combo: old.combination_name,
-        from: old.current_stock, to: parseInt(current_stock)
+        from: oldStock, to: newStockVal
       });
     }
 
@@ -1185,11 +1223,31 @@ const advancedSearch = async (req, res) => {
   }
 };
 
+const getCombinationById = async (req, res) => {
+  try {
+    const { comboId } = req.params;
+    const { data: combo, error } = await supabase
+      .from('combinations')
+      .select('*, combination_colors(*), beams(id, beam_name, saree_id, sarees(series_code, sari_name, brand))')
+      .eq('id', comboId)
+      .eq('owner_id', req.user.owner_id)
+      .single();
+
+    if (error || !combo) {
+      return res.status(404).json({ error: 'Combination not found' });
+    }
+    res.json({ combination: combo });
+  } catch (error) {
+    console.error('getCombinationById error:', error);
+    res.status(500).json({ error: 'Failed to fetch combination' });
+  }
+};
+
 module.exports = {
-  getSarees, getSareeById, createSaree,  updateSaree,
+  getSarees, getSareeById, createSaree, updateSaree,
   deleteSaree,
   nextSeries,
   setSeries,
   addBeam, updateBeam, deleteBeam,
-  addCombination, updateCombination, deleteCombination, advancedSearch
+  addCombination, getCombinationById, updateCombination, deleteCombination, advancedSearch
 };

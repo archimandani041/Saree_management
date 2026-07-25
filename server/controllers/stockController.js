@@ -328,11 +328,22 @@ const getHistory = async (req, res) => {
     const limitVal = parseInt(limit);
 
     let query = supabase.from('stock_history')
-      .select('*, sarees(sari_name, series_code, image_url), combinations(id, combination_name, image_url, combination_colors(f_number, color_name, company_name))', { count: 'exact' })
+      .select('*, sarees(sari_name, series_code, image_url, brand), combinations(id, combination_name, current_stock, minimum_stock, brand, image_url, combination_colors(f_number, color_name, company_name))', { count: 'exact' })
       .eq('owner_id', req.user.owner_id);
 
     if (saree_id) query = query.eq('saree_id', saree_id);
-    if (action && action !== 'all') query = query.eq('action', action);
+    if (action && action !== 'all') {
+      const actNorm = action.trim();
+      if (actNorm === 'Stock In' || actNorm === 'Stock') {
+        query = query.or('action.eq.Increase,action.eq.Stock In,action.eq.Stock,action.eq.Stock Added');
+      } else if (actNorm === 'Stock Delivery' || actNorm === 'Decrease') {
+        query = query.or('action.eq.Decrease,action.eq.Stock Delivery');
+      } else if (actNorm === 'Delivery (Machine)' || actNorm === 'Delivery Machine' || actNorm === 'Delivery') {
+        query = query.or('reason.ilike.%Machine Delivery%,reason.ilike.%Delivery (Machine)%,action.eq.Delivery (Machine),action.eq.Delivery Machine').not('reason', 'ilike', '%Stock Delivery%');
+      } else {
+        query = query.ilike('action', `%${actNorm}%`);
+      }
+    }
 
     if (from_date) query = query.gte('created_at', from_date);
     if (to_date) query = query.lte('created_at', to_date);
@@ -381,11 +392,31 @@ const getHistory = async (req, res) => {
       const isRolledBack = Boolean(entry.is_undone || details.is_rolled_back);
       const isRollbackRecord = entry.action === 'Rollback' || entry.action === 'Undo' || Boolean(details.is_rollback_record);
 
+      let uiAction = 'Adjustment';
+      const act = (entry.action || '').trim();
+      const dAct = details.action || details.action_detail || details.reason_category || '';
+      const remarks = details.remarks || '';
+
+      if (act === 'Increase' || dAct === 'Stock In' || dAct === 'Stock') {
+        uiAction = 'Stock In';
+      } else if (act === 'Decrease' || dAct === 'Stock Delivery') {
+        uiAction = 'Stock Delivery';
+      } else if (
+        act === 'Delivery (Machine)' ||
+        dAct === 'Delivery (Machine)' ||
+        dAct === 'Delivery' ||
+        remarks.includes('Machine Delivery')
+      ) {
+        uiAction = 'Delivery (Machine)';
+      } else if (act === 'Rollback' || act === 'Undo' || entry.is_undone) {
+        uiAction = 'Rollback';
+      }
+
       return {
         ...entry,
         transaction_id: entry.id,
         image_url: entry.image_url || entry.combinations?.image_url || entry.sarees?.image_url,
-        action: entry.action,
+        action: uiAction,
         is_rolled_back: isRolledBack,
         is_rollback: isRollbackRecord,
         rollback_date: details.rollback_date || (isRolledBack ? entry.updated_at : null),
@@ -428,30 +459,40 @@ const getLedgerStats = async (req, res) => {
       .gte('created_at', todayStart.toISOString());
 
     let stockAdded = 0;
-    let deliveries = 0;
+    let machineDeliveries = 0;
     let stockDeliveries = 0;
-    let returns = 0;
-    let damage = 0;
-    let rollbacks = 0;
 
     (todayRecords || []).forEach(r => {
-      const qty = Math.abs(r.new_stock - r.old_stock);
-      const act = r.action;
-      if (act === 'Stock' || act === 'Purchase Received') stockAdded += qty;
-      else if (act === 'Delivery') deliveries += 1;
-      else if (act === 'Stock Delivery') stockDeliveries += qty;
-      else if (act === 'Return') returns += qty;
-      else if (act === 'Damage') damage += qty;
-      else if (act === 'Rollback' || r.is_undone) rollbacks += 1;
+      let details = {};
+      try {
+        if (r.reason && (r.reason.startsWith('{') || r.reason.startsWith('['))) {
+          details = JSON.parse(r.reason);
+        }
+      } catch (e) {}
+
+      const qty = Math.abs((r.new_stock ?? 0) - (r.old_stock ?? 0)) || (details.quantity_changed ? Math.abs(details.quantity_changed) : 0);
+      const act = (r.action || '').trim();
+      const dAct = details.action || details.action_detail || details.reason_category || '';
+      const remarks = details.remarks || '';
+
+      if (act === 'Increase' || dAct === 'Stock In' || dAct === 'Stock' || dAct === 'Purchase Received') {
+        stockAdded += qty;
+      } else if (act === 'Decrease' || dAct === 'Stock Delivery') {
+        stockDeliveries += qty;
+      } else if (
+        act === 'Delivery (Machine)' ||
+        dAct === 'Delivery (Machine)' ||
+        dAct === 'Delivery' ||
+        remarks.includes('Machine Delivery')
+      ) {
+        machineDeliveries += 1;
+      }
     });
 
     res.json({
       todayStockAdded: stockAdded,
-      todayDeliveries: deliveries,
-      todayStockDeliveries: stockDeliveries,
-      todayReturns: returns,
-      todayDamage: damage,
-      todayRollbacks: rollbacks
+      todayDeliveries: machineDeliveries,
+      todayStockDeliveries: stockDeliveries
     });
   } catch (err) {
     console.error('getLedgerStats error:', err);
@@ -459,5 +500,78 @@ const getLedgerStats = async (req, res) => {
   }
 };
 
-module.exports = { updateStock, undoStockChange, rollbackStockChange, getHistory, getLedgerStats };
+const deleteHistoryRecord = async (req, res) => {
+  try {
+    const { historyId } = req.params;
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only administrators can delete history records.' });
+    }
+
+    // 1. Fetch the target history record
+    const { data: entry, error: fetchErr } = await supabase
+      .from('stock_history')
+      .select('*')
+      .eq('id', historyId)
+      .single();
+
+    if (fetchErr || !entry) {
+      return res.status(404).json({ error: 'History record not found' });
+    }
+
+    if (entry.owner_id && req.user.owner_id && entry.owner_id !== req.user.owner_id) {
+      return res.status(403).json({ error: 'Unauthorized to delete this record.' });
+    }
+
+    // 2. Perform Automatic Stock Rollback if entry has a combination_id
+    if (entry.combination_id) {
+      const { data: combo } = await supabase
+        .from('combinations')
+        .select('current_stock')
+        .eq('id', entry.combination_id)
+        .single();
+
+      if (combo) {
+        const currentStock = combo.current_stock ?? 0;
+        let delta = 0;
+
+        const act = (entry.action || '').toUpperCase();
+        if (['STOCK', 'INCREASE', 'STOCK ADDED', 'STOCK IN', 'PURCHASE RECEIVED'].includes(act)) {
+          const qty = Math.abs(entry.new_stock - entry.old_stock);
+          delta = -qty;
+        } else if (['STOCK DELIVERY', 'DECREASE', 'DELIVERY OUT', 'DAMAGE', 'RETURN'].includes(act)) {
+          const qty = Math.abs(entry.old_stock - entry.new_stock);
+          delta = +qty;
+        } else if (act === 'DELIVERY') {
+          delta = 0;
+        } else {
+          // Default: revert stock back to old_stock before this transaction
+          delta = entry.old_stock - entry.new_stock;
+        }
+
+        const newStock = Math.max(0, currentStock + delta);
+
+        // Apply updated stock level to combination
+        await supabase
+          .from('combinations')
+          .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+          .eq('id', entry.combination_id);
+      }
+    }
+
+    // 3. Delete history record from DB
+    const { error: deleteErr } = await supabase
+      .from('stock_history')
+      .delete()
+      .eq('id', historyId);
+
+    if (deleteErr) throw deleteErr;
+
+    res.json({ message: 'Stock automatically rolled back and history row deleted successfully.', id: historyId });
+  } catch (error) {
+    console.error('deleteHistoryRecord error:', error);
+    res.status(500).json({ error: 'Failed to rollback and delete history record' });
+  }
+};
+
+module.exports = { updateStock, undoStockChange, rollbackStockChange, getHistory, getLedgerStats, deleteHistoryRecord };
 
