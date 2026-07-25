@@ -93,12 +93,21 @@ export const parserAPI = {
   simulateWebhook: (message) => api.post('/parser/whatsapp-webhook', { message }),
 };
 
+// Duplicate Detection APIs
+export const duplicateAPI = {
+  checkSaree:          (data) => api.post('/duplicates/check-saree',          data),
+  checkBeam:           (data) => api.post('/duplicates/check-beam',            data),
+  checkCombination:    (data) => api.post('/duplicates/check-combination',     data),
+  checkWhatsAppBatch:  (data) => api.post('/duplicates/check-whatsapp-batch',  data),
+};
+
 // Stock APIs
 export const stockAPI = {
-  update: (data) => api.patch('/stock/update', data),
+  update: (data) => api.post('/stock/update', data),
   undo: (historyId) => api.patch(`/stock/undo/${historyId}`),
   rollback: (historyId, data) => api.post(`/stock/rollback/${historyId}`, data),
   getHistory: (params) => api.get('/stock/history', { params }),
+  getStats: () => api.get('/stock/stats'),
 };
 
 // Dashboard APIs

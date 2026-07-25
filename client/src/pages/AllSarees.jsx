@@ -745,16 +745,16 @@ const AllSarees = () => {
                                               alt={combo.combination_name || 'Combination Image'}
                                               loading="lazy"
                                               sx={{
-                                                width: 54,
-                                                height: 54,
-                                                borderRadius: '6px',
+                                                width: 100,
+                                                height: 100,
+                                                borderRadius: '8px',
                                                 objectFit: 'cover',
                                                 border: '1px solid #EAE6E1',
-                                                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
                                                 flexShrink: 0,
                                                 cursor: 'pointer',
                                                 transition: 'transform 0.15s ease',
-                                                '&:hover': { transform: 'scale(1.05)' }
+                                                '&:hover': { transform: 'scale(1.04)' }
                                               }}
                                               onClick={() => navigate(`/sarees/${saree.id}`)}
                                             />

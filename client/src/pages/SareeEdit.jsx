@@ -136,9 +136,9 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, s
       transition: 'border-color 0.2s'
     }}>
       {saving && <LinearProgress />}
-      <Box sx={{ p: 2 }}>
-        {/* Combination image */}
-        <Box sx={{ mb: 2 }}>
+      <Box sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2.5, alignItems: 'flex-start' }}>
+        {/* Left side: Medium size image */}
+        <Box sx={{ width: { xs: '100%', sm: 180, md: 220 }, flexShrink: 0 }}>
           <CombinationImageUpload
             comboId={combo.id}
             imageUrl={combo.image_url || ''}
@@ -156,77 +156,79 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, s
             }}
           />
         </Box>
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Chip
-              size="small" color={dirty ? 'warning' : 'default'} variant="outlined"
-              label={`Combination ${comboIndex + 1}`}
-              icon={dirty ? <WarningIcon /> : undefined}
-            />
-            {colorSummary && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 240 }}>{colorSummary}</Typography>}
+
+        {/* Right side: Header & Fields */}
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                size="small" color={dirty ? 'warning' : 'default'} variant="outlined"
+                label={`Combination ${comboIndex + 1}`}
+                icon={dirty ? <WarningIcon /> : undefined}
+              />
+              {colorSummary && <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 240 }}>{colorSummary}</Typography>}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Chip size="small" label={`${combo.current_stock} pcs`} color="primary" />
+              <Tooltip title="Delete Combination"><IconButton size="small" color="error" onClick={() => setDelConfirm(true)} disabled={saving}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+            </Box>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Chip size="small" label={`${combo.current_stock} pcs`} color="primary" />
-            <Tooltip title="Delete Combination"><IconButton size="small" color="error" onClick={() => setDelConfirm(true)} disabled={saving}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
-          </Box>
+
+          {/* Fields */}
+          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
+            <Grid size={{ xs: 6, sm: 3 }}>
+              <TextField size="small" fullWidth type="number" label="Current Stock" value={combo.current_stock}
+                onChange={e => update('current_stock', e.target.value)} disabled={saving} slotProps={{ htmlInput: { min: 0 } }} />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 3 }}>
+              <TextField size="small" fullWidth type="number" label="Min Stock Alert" value={combo.minimum_stock || 20}
+                onChange={e => update('minimum_stock', e.target.value)} disabled={saving} slotProps={{ htmlInput: { min: 0 } }} />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 3 }}>
+              <FormControl fullWidth size="small" disabled={saving}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={combo.status || 'In Stock'}
+                  label="Status"
+                  onChange={e => update('status', e.target.value)}
+                >
+                  <MenuItem value="In Stock">In Stock</MenuItem>
+                  <MenuItem value="In Delivery">In Delivery</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField size="small" fullWidth label="Notes" value={combo.notes || ''}
+                onChange={e => update('notes', e.target.value)} disabled={saving} />
+            </Grid>
+          </Grid>
+
+          {/* F-Colors */}
+          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5, display: 'block' }}>F-Colors</Typography>
+          {combo.colors.map((color, ci) => {
+            const isDuplicateColor = combo.colors.some((c, idx) => idx !== ci && c.f_number.trim().toUpperCase() === color.f_number.trim().toUpperCase());
+            return (
+              <ColorRow key={ci} color={color} index={ci} onChange={updateColor} onRemove={removeColor} disabled={saving} isDuplicate={isDuplicateColor} />
+            );
+          })}
+          <Button size="small" startIcon={<AddIcon />} onClick={addColor} disabled={saving} sx={{ mt: 0.5, mb: 1 }}>
+            Add Color
+          </Button>
+
+          {/* Save/Cancel actions */}
+          {dirty && (
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button size="small" variant="outlined" startIcon={<CancelIcon />}
+                onClick={() => { setCombo(JSON.parse(JSON.stringify(initialCombo))); setDirty(false); }} disabled={saving}>
+                Discard
+              </Button>
+            </Box>
+          )}
         </Box>
-
-        {/* Fields */}
-        <Grid container spacing={2} sx={{ mb: 1.5 }}>
-          <Grid size={{ xs: 6, sm: 2.5 }}>
-            <TextField size="small" fullWidth type="number" label="Current Stock" value={combo.current_stock}
-              onChange={e => update('current_stock', e.target.value)} disabled={saving} slotProps={{ htmlInput: { min: 0 } }} />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 2.5 }}>
-            <TextField size="small" fullWidth type="number" label="Min Stock Alert" value={combo.minimum_stock || 20}
-              onChange={e => update('minimum_stock', e.target.value)} disabled={saving} slotProps={{ htmlInput: { min: 0 } }} />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <FormControl fullWidth size="small" disabled={saving}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={combo.status || 'In Stock'}
-                label="Status"
-                onChange={e => update('status', e.target.value)}
-              >
-                <MenuItem value="In Stock">In Stock</MenuItem>
-                <MenuItem value="In Delivery">In Delivery</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField size="small" fullWidth label="Notes" value={combo.notes || ''}
-              onChange={e => update('notes', e.target.value)} disabled={saving} />
-          </Grid>
-        </Grid>
-
-        {/* F-Colors */}
-        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5, display: 'block' }}>F-Colors</Typography>
-        {combo.colors.map((color, ci) => {
-          const isDuplicateColor = combo.colors.some((c, idx) => idx !== ci && c.f_number.trim().toUpperCase() === color.f_number.trim().toUpperCase());
-          return (
-            <ColorRow key={ci} color={color} index={ci} onChange={updateColor} onRemove={removeColor} disabled={saving} isDuplicate={isDuplicateColor} />
-          );
-        })}
-        <Button size="small" startIcon={<AddIcon />} onClick={addColor} disabled={saving} sx={{ mt: 0.5, mb: 1 }}>
-          Add Color
-        </Button>
-
-
-
-        {/* Save/Cancel actions */}
-        {dirty && (
-          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-            <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-            <Button size="small" variant="outlined" startIcon={<CancelIcon />}
-              onClick={() => { setCombo(JSON.parse(JSON.stringify(initialCombo))); setDirty(false); }} disabled={saving}>
-              Discard
-            </Button>
-          </Box>
-        )}
       </Box>
 
       {/* Delete confirm */}

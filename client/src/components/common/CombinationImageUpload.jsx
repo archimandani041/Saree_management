@@ -230,7 +230,7 @@ const CombinationImageUpload = ({
         /* ── Has image: preview with overlay ── */
         <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
           <Box component="img" src={display} alt="Combination image" loading="lazy"
-            sx={{ width: '100%', height: 200, objectFit: 'cover', display: 'block', transition: 'transform 0.25s', '&:hover': { transform: 'scale(1.02)' } }} />
+            sx={{ width: '100%', height: 165, objectFit: 'cover', display: 'block', transition: 'transform 0.25s', '&:hover': { transform: 'scale(1.02)' } }} />
           {/* Overlay */}
           <Box sx={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -289,7 +289,7 @@ const CombinationImageUpload = ({
           sx={{
             border: '2px dashed',
             borderColor: dragOver ? 'primary.main' : focused ? 'primary.light' : 'divider',
-            borderRadius: 2, height: 200,
+            borderRadius: 2, height: 165,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             gap: 1, cursor: disabled || uploading ? 'default' : 'pointer',
             bgcolor: dragOver ? 'rgba(59,17,26,0.06)' : focused ? 'rgba(59,17,26,0.02)' : 'background.default',

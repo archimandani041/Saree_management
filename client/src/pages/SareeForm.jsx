@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { sareeAPI, parserAPI, uploadAPI, combinationImageAPI } from '../services/api';
+import { sareeAPI, uploadAPI, combinationImageAPI } from '../services/api';
 import {
   Box, Paper, TextField, Button, Typography, Grid, IconButton,
   Divider, Alert, CircularProgress, Chip, Accordion, AccordionSummary,
@@ -19,9 +19,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUpload from '@mui/icons-material/CloudUpload';
 import ArrowBack from '@mui/icons-material/ArrowBack';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import ContentPasteIcon from '@mui/icons-material/ContentPaste';
+
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import CombinationImageUpload from '../components/common/CombinationImageUpload';
+import WhatsAppImportDialog from '../components/common/WhatsAppImportDialog';
 
 // ── A single F-color row ──────────────────────────────────────────
 const ColorRow = ({ color, index, onChange, onRemove, isDuplicate }) => (
@@ -151,11 +152,8 @@ const SareeForm = () => {
 
   // WhatsApp paste
   const [pasteOpen, setPasteOpen] = useState(false);
-  const [pasteText, setPasteText] = useState('');
-  const [parseError, setParseError] = useState('');
   const [parsedEntries, setParsedEntries] = useState([]);
   const [parseWarnings, setParseWarnings] = useState([]);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [mismatchEntry, setMismatchEntry] = useState(null);
   const [selectedPreviewRows, setSelectedPreviewRows] = useState([]);
 
@@ -367,92 +365,105 @@ const SareeForm = () => {
     return { targetCode, allowedEntries, blockedEntries, allExist: false };
   };
 
-  // ── WhatsApp paste parser ─────────────────────────────────
-  const handleParse = async () => {
-    setParseError('');
-    setParsedEntries([]);
-    setParseWarnings([]);
+  // ── WhatsApp import callback (receives parsed entries from WhatsAppImportDialog) ──
+  const handleWhatsAppImport = async (checkedEntries, duplicateEntriesFromDialog, warningsFromDialog) => {
+    if (!checkedEntries || checkedEntries.length === 0) return;
+
+    const allEntries = checkedEntries;
+    const warnings = [...(warningsFromDialog || [])];
+
+    // ── Multi-saree detection with frequency-based target selection ──
+    const distinctCodes = new Set(
+      allEntries.map(e => (e.series_code || e.series_base || '').trim().toUpperCase()).filter(Boolean)
+    );
+
+    if (distinctCodes.size > 1 || (distinctCodes.size === 1 && seriesBase.trim() && !distinctCodes.has(seriesBase.trim().toUpperCase()))) {
+      const result = await selectTargetSareeByFrequency(allEntries);
+
+      if (!result) {
+        // No recognizable codes, fall through
+      } else if (result.allExist) {
+        setAllSareesExistCodes(result.existingCodes);
+        setAllSareesExistOpen(true);
+        return;
+      } else if (result.blockedEntries.length > 0) {
+        setBlockedConfirmData({ targetCode: result.targetCode, blockedEntries: result.blockedEntries, allowedEntries: result.allowedEntries, warnings });
+        setBlockedConfirmOpen(true);
+        return;
+      } else {
+        setParsedEntries(result.allowedEntries);
+        setSelectedPreviewRows(result.allowedEntries.map((_, i) => i));
+        setParseWarnings(warnings);
+        handleStartImportDirect(result.allowedEntries);
+        return;
+      }
+    } else if (seriesBase.trim()) {
+      const targetBase = seriesBase.trim().toUpperCase();
+      const allowedEntries = allEntries.filter(e => {
+        const entryBase = (e.series_base || '').trim().toUpperCase();
+        return !entryBase || entryBase === targetBase;
+      });
+      const blockedEntries = allEntries.filter(e => {
+        const entryBase = (e.series_base || '').trim().toUpperCase();
+        return entryBase && entryBase !== targetBase;
+      });
+      if (blockedEntries.length > 0) {
+        setBlockedConfirmData({ targetCode: targetBase, blockedEntries, allowedEntries, warnings });
+        setBlockedConfirmOpen(true);
+        return;
+      }
+      if (allowedEntries.length === 0) {
+        setSnack(`None of the parsed entries belong to this saree (${targetBase}).`);
+        return;
+      }
+    }
+
+    // No issues — proceed directly
+    setParsedEntries(allEntries);
+    setSelectedPreviewRows(allEntries.map((_, i) => i));
+    setParseWarnings(warnings);
+    handleStartImportDirect(allEntries);
+  };
+
+  // Direct import helper (bypasses preview since WhatsAppImportDialog already showed preview)
+  const handleStartImportDirect = async (entriesToCheck) => {
+    // Mismatch check
+    if (seriesBase) {
+      const targetBase = seriesBase.trim().toUpperCase();
+      const mismatch = entriesToCheck.find(e => e.series_base && e.series_base.trim().toUpperCase() !== targetBase);
+      if (mismatch) { setMismatchEntry(mismatch); return; }
+    }
+
+    // Level 4: WhatsApp Import Validation: check database for duplicate series codes
+    setLoading(true); setError('');
+    const existSareeCheckQueue = [];
+    const processedCodes = new Set();
+
     try {
-      const { data } = await parserAPI.parseWhatsApp(pasteText);
-      const allEntries = data.entries || [];
-      if (allEntries.length === 0) {
-        setParseError('Could not parse any entries from the message.');
+      for (const entry of entriesToCheck) {
+        const code = (entry.series_code || '').toUpperCase();
+        if (code && !processedCodes.has(code)) {
+          processedCodes.add(code);
+          const { data } = await sareeAPI.getAll({ search: code });
+          const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === code);
+          if (exactMatch) {
+            existSareeCheckQueue.push({ seriesCode: code, sareeId: exactMatch.id, entry });
+          }
+        }
+      }
+
+      setLoading(false);
+
+      if (existSareeCheckQueue.length > 0) {
+        setSareeExistQueue(existSareeCheckQueue);
+        setActiveSareeExist(existSareeCheckQueue[0]);
         return;
       }
 
-      const warnings = [...(data.warnings || [])];
-      const duplicateEntries = data.duplicateEntries || [];
-
-      // ── Step 1: Duplicate blocks check ────────────────────────────
-      // If the server found exact duplicate blocks, show confirmation before removing
-      if (duplicateEntries.length > 0) {
-        setDupConfirmData({ uniqueEntries: allEntries, duplicateEntries, warnings });
-        setDupConfirmOpen(true);
-        setPasteOpen(false);
-        return; // wait for user to confirm
-      }
-
-      // ── Step 2: Multi-saree detection with frequency-based target selection ──
-      const distinctCodes = new Set(
-        allEntries.map(e => (e.series_code || e.series_base || '').trim().toUpperCase()).filter(Boolean)
-      );
-
-      if (distinctCodes.size > 1 || (distinctCodes.size === 1 && seriesBase.trim() && !distinctCodes.has(seriesBase.trim().toUpperCase()))) {
-        // Multiple sarees in the message — select the best target
-        const result = await selectTargetSareeByFrequency(allEntries);
-
-        if (!result) {
-          // No recognizable codes, fall through to normal preview
-        } else if (result.allExist) {
-          setAllSareesExistCodes(result.existingCodes);
-          setAllSareesExistOpen(true);
-          setPasteOpen(false);
-          return;
-        } else if (result.blockedEntries.length > 0) {
-          setBlockedConfirmData({ targetCode: result.targetCode, blockedEntries: result.blockedEntries, allowedEntries: result.allowedEntries, warnings });
-          setBlockedConfirmOpen(true);
-          setPasteOpen(false);
-          return;
-        } else {
-          // All entries belong to the single target (edge case)
-          setParsedEntries(result.allowedEntries);
-          setSelectedPreviewRows(result.allowedEntries.map((_, i) => i));
-          setParseWarnings(warnings);
-          setPreviewOpen(true);
-          setPasteOpen(false);
-          return;
-        }
-      } else if (seriesBase.trim()) {
-        // Single code in message — still enforce it matches the open form's series base
-        const targetBase = seriesBase.trim().toUpperCase();
-        const allowedEntries = allEntries.filter(e => {
-          const entryBase = (e.series_base || '').trim().toUpperCase();
-          return !entryBase || entryBase === targetBase;
-        });
-        const blockedEntries = allEntries.filter(e => {
-          const entryBase = (e.series_base || '').trim().toUpperCase();
-          return entryBase && entryBase !== targetBase;
-        });
-        if (blockedEntries.length > 0) {
-          setBlockedConfirmData({ targetCode: targetBase, blockedEntries, allowedEntries, warnings });
-          setBlockedConfirmOpen(true);
-          setPasteOpen(false);
-          return;
-        }
-        if (allowedEntries.length === 0) {
-          setParseError(`None of the parsed entries belong to this saree (${targetBase}). Check the series code in the message.`);
-          return;
-        }
-      }
-
-      // No issues — proceed directly to preview
-      setParsedEntries(allEntries);
-      setSelectedPreviewRows(allEntries.map((_, i) => i));
-      setParseWarnings(warnings);
-      setPreviewOpen(true);
-      setPasteOpen(false);
-    } catch (e) {
-      setParseError(e.response?.data?.error || 'Could not parse message');
+      proceedWithCombinationImport(entriesToCheck);
+    } catch (err) {
+      setLoading(false);
+      setError('Failed to check database for duplicate series codes.');
     }
   };
 
@@ -470,7 +481,7 @@ const SareeForm = () => {
     setParsedEntries(allowedEntries);
     setSelectedPreviewRows(allowedEntries.map((_, i) => i));
     setParseWarnings(finalWarnings);
-    setPreviewOpen(true);
+    handleStartImportDirect(allowedEntries);
   };
 
   // Called when user confirms removal of duplicate blocks
@@ -515,7 +526,7 @@ const SareeForm = () => {
     setParsedEntries(uniqueEntries);
     setSelectedPreviewRows(uniqueEntries.map((_, i) => i));
     setParseWarnings(finalWarnings);
-    setPreviewOpen(true);
+    handleStartImportDirect(uniqueEntries);
   };
 
   // Check for duplicate combo (Same Beam + Same Series Code + Same Combination Name + Same F Colors)
@@ -633,7 +644,6 @@ const SareeForm = () => {
       setImportAccumulator(newEntries);
       setDupQueue(duplicates);
       setActiveDup(duplicates[0]);
-      setPreviewOpen(false); // Close preview to handle duplicates
     } else {
       executeFinalImport(checkedEntries);
     }
@@ -680,10 +690,8 @@ const SareeForm = () => {
     }
 
     setBeams(updated.length > 0 ? updated : [{ beam_name: '', combinations: [newCombo()] }]);
-    setPreviewOpen(false);
     setParsedEntries([]);
     setSelectedPreviewRows([]);
-    setPasteText('');
     setSnack('WhatsApp message imported successfully!');
   };
 
@@ -994,106 +1002,13 @@ const SareeForm = () => {
         </Grid>
       </Box>
 
-      {/* WhatsApp Paste Dialog */}
-      <Dialog open={pasteOpen} onClose={() => setPasteOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
-          <WhatsAppIcon color="success" /> Paste WhatsApp Message
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Paste your WhatsApp message (single or multiple entries). We'll extract beam, series code, F-colors, and stock automatically.
-          </Typography>
-          <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', whiteSpace: 'pre' }}>
-              {`BLACK Beam:\nKS526C (Delivery)\nF-1: Red\nF-2: Normal Chempiyan\n51 pcs/-`}
-            </Typography>
-          </Paper>
-          <TextField multiline rows={10} fullWidth label="Paste message here" value={pasteText}
-            onChange={e => setPasteText(e.target.value)} placeholder="Paste one or more WhatsApp entries..." autoFocus />
-          {parseError && <Alert severity="error" sx={{ mt: 1.5 }}>{parseError}</Alert>}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setPasteOpen(false)}>Cancel</Button>
-          <Button variant="contained" color="success" onClick={handleParse} disabled={!pasteText.trim()}>
-            Parse & Preview
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.4rem' }}>📋 Import Preview — {parsedEntries.length} {parsedEntries.length === 1 ? 'Entry' : 'Entries'}</DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {parseWarnings.length > 0 && (
-            <Box sx={{ p: 2 }}>
-              <Alert severity="warning">
-                {parseWarnings.map((w, i) => <Typography key={i} variant="body2">{w}</Typography>)}
-              </Alert>
-            </Box>
-          )}
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={parsedEntries.length > 0 && selectedPreviewRows.length === parsedEntries.length}
-                      indeterminate={selectedPreviewRows.length > 0 && selectedPreviewRows.length < parsedEntries.length}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedPreviewRows(parsedEntries.map((_, i) => i));
-                        else setSelectedPreviewRows([]);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Beam</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Series Code</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Combination Name</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Stock</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Total Colors</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {parsedEntries.map((entry, index) => {
-                  const isChecked = selectedPreviewRows.includes(index);
-                  const isDup = detectDuplicate(entry) !== null;
-                  return (
-                    <TableRow key={index} hover selected={isChecked}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={isChecked}
-                          onChange={() => {
-                            if (isChecked) setSelectedPreviewRows(selectedPreviewRows.filter(i => i !== index));
-                            else setSelectedPreviewRows([...selectedPreviewRows, index]);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>{entry.beam_name || '—'}</TableCell>
-                      <TableCell>{entry.series_code || '—'}</TableCell>
-                      <TableCell>{entry.combination_name || '—'}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700 }}>{entry.stock ?? '—'} pcs</TableCell>
-                      <TableCell align="right">{entry.colors?.length || 0}</TableCell>
-                      <TableCell>
-                        {isDup ? (
-                          <Chip label="Already exists" size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
-                        ) : (
-                          <Chip label="New" size="small" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
-          <Button onClick={() => setPreviewOpen(false)} variant="outlined">Cancel</Button>
-          <Button variant="contained" color="success" onClick={handleStartImport} disabled={selectedPreviewRows.length === 0}>
-            Import Checked ({selectedPreviewRows.length})
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* WhatsApp Import Dialog (handles paste, preview, editing, confidence) */}
+      <WhatsAppImportDialog
+        open={pasteOpen}
+        onClose={() => setPasteOpen(false)}
+        onImport={handleWhatsAppImport}
+        currentSeriesBase={seriesBase}
+      />
 
       {/* Duplicate Resolution Dialog */}
       <Dialog open={!!activeDup} onClose={() => { setActiveDup(null); setDupQueue([]); }} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}>

@@ -321,84 +321,48 @@ const getHistory = async (req, res) => {
   try {
     const {
       saree_id, page = 1, limit = 50, action, from_date, to_date, search,
-      supplier_name, customer_name, reason_category, user_name
+      supplier_name, customer_name, machine_name, invoice_number, user_name, group_by
     } = req.query;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
 
     let query = supabase.from('stock_history')
-      .select('*, sarees(sari_name, series_code, image_url), combinations(id, combination_name, combination_colors(f_number, color_name, company_name))', { count: 'exact' })
+      .select('*, sarees(sari_name, series_code, image_url), combinations(id, combination_name, image_url, combination_colors(f_number, color_name, company_name))', { count: 'exact' })
       .eq('owner_id', req.user.owner_id);
 
-    if (saree_id) {
-      query = query.eq('saree_id', saree_id);
-    }
-    if (action === 'Rolled Back') {
-      query = query.eq('is_undone', true);
-    } else if (action === 'Rollback') {
-      query = query.or('action.eq.Rollback,action.eq.Undo');
-    } else if (action === 'Delivery') {
-      query = query.or('action.eq.Delivery,reason.ilike.%Machine Delivery%');
-    } else if (action === 'Stock Delivery') {
-      query = query.or('action.eq.Stock Delivery,reason.ilike.%Stock Delivered%');
-    } else if (action === 'Stock') {
-      query = query.or('action.eq.Stock,action.eq.Increase,reason.ilike.%Stock In%');
-    } else if (action === 'all') {
-      // Fetch all including rolled back
-    } else if (action) {
-      query = query.eq('action', action);
-    } else {
-      // Default: hide rolled-back entries and undo logs for a clean active history log
-      query = query.eq('is_undone', false).neq('action', 'Undo').neq('action', 'Rollback');
-    }
+    if (saree_id) query = query.eq('saree_id', saree_id);
+    if (action && action !== 'all') query = query.eq('action', action);
 
-    if (from_date) {
-      query = query.gte('created_at', from_date);
-    }
-    if (to_date) {
-      query = query.lte('created_at', to_date);
-    }
+    if (from_date) query = query.gte('created_at', from_date);
+    if (to_date) query = query.lte('created_at', to_date);
 
-    // Apply text filters
     if (search) {
       const cleanSearch = search.trim();
-
-      // 1. Fetch matching Saree IDs (case-insensitive series_code or sari_name)
       const { data: matchedSarees } = await supabase
-        .from('sarees')
-        .select('id')
-        .eq('owner_id', req.user.owner_id)
+        .from('sarees').select('id').eq('owner_id', req.user.owner_id)
         .or(`series_code.ilike.%${cleanSearch}%,sari_name.ilike.%${cleanSearch}%`);
 
       const matchedSareeIds = (matchedSarees || []).map(s => s.id);
-
-      // 2. Build multi-field PostgREST OR conditions
       const orParts = [
         `beam_name.ilike.%${cleanSearch}%`,
         `combination_name.ilike.%${cleanSearch}%`,
         `changed_by_name.ilike.%${cleanSearch}%`,
+        `invoice_number.ilike.%${cleanSearch}%`,
+        `supplier_name.ilike.%${cleanSearch}%`,
+        `customer_name.ilike.%${cleanSearch}%`,
+        `machine_name.ilike.%${cleanSearch}%`,
         `reason.ilike.%${cleanSearch}%`
       ];
-
-      if (matchedSareeIds.length > 0) {
-        orParts.push(`saree_id.in.(${matchedSareeIds.join(',')})`);
-      }
-
+      if (matchedSareeIds.length > 0) orParts.push(`saree_id.in.(${matchedSareeIds.join(',')})`);
       query = query.or(orParts.join(','));
     }
-    if (supplier_name) {
-      query = query.ilike('reason', `%supplier_name%:${supplier_name}%`);
-    }
-    if (customer_name) {
-      query = query.ilike('reason', `%customer_name%:${customer_name}%`);
-    }
-    if (reason_category) {
-      query = query.ilike('reason', `%reason_category%:${reason_category}%`);
-    }
-    if (user_name) {
-      query = query.or(`changed_by_name.ilike.%${user_name}%,reason.ilike.%user_name%:${user_name}%`);
-    }
+
+    if (supplier_name) query = query.ilike('supplier_name', `%${supplier_name}%`);
+    if (customer_name) query = query.ilike('customer_name', `%${customer_name}%`);
+    if (machine_name) query = query.ilike('machine_name', `%${machine_name}%`);
+    if (invoice_number) query = query.ilike('invoice_number', `%${invoice_number}%`);
+    if (user_name) query = query.ilike('changed_by_name', `%${user_name}%`);
 
     query = query.order('created_at', { ascending: false });
     query = query.range(offset, offset + limitVal - 1);
@@ -407,67 +371,31 @@ const getHistory = async (req, res) => {
     if (error) throw error;
 
     const formattedHistory = (history || []).map(entry => {
-      let details = null;
+      let details = entry.metadata || {};
       try {
         if (entry.reason && (entry.reason.startsWith('{') || entry.reason.startsWith('['))) {
-          details = JSON.parse(entry.reason);
+          details = { ...details, ...JSON.parse(entry.reason) };
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
 
-      if (!details) {
-        const qtyChanged = entry.new_stock - entry.old_stock;
-        details = {
-          sari_number: entry.sarees?.series_code || entry.series_code || 'UNKNOWN',
-          beam_name: entry.beam_name || 'UNKNOWN',
-          combination_name: entry.combination_name || 'Combination',
-          action: entry.action === 'Increase' ? 'Stock Added' : entry.action === 'Decrease' ? 'Delivery' : entry.action,
-          opening_stock: entry.old_stock,
-          quantity_changed: qtyChanged,
-          closing_stock: entry.new_stock,
-          reason_category: entry.action,
-          supplier_name: null,
-          customer_name: null,
-          invoice_number: null,
-          delivery_notes: null,
-          remarks: entry.reason || '',
-          user_name: entry.changed_by_name || 'System'
-        };
-      }
-
-      const isRolledBack = Boolean(entry.is_undone || (details && details.is_rolled_back));
-      const isRollbackRecord = entry.action === 'Rollback' || Boolean(details && details.is_rollback_record);
-
-      let effectiveAction = details?.action_detail || details?.action || entry.action;
-      const rawText = (entry.reason || '') + ' ' + (details?.remarks || '');
-      if (rawText.includes('Machine Delivery') || rawText.includes('Delivery (Machine)')) {
-        effectiveAction = 'Delivery';
-      } else if (rawText.includes('Stock Delivered')) {
-        effectiveAction = 'Stock Delivery';
-      } else if (rawText.includes('Stock In')) {
-        effectiveAction = 'Stock';
-      }
-
-      const rollbackDate = (details && details.rollback_date) || (isRolledBack ? entry.updated_at || entry.created_at : null);
-      const rollbackBy = (details && details.rollback_by) || null;
-      const rollbackByName = (details && details.rollback_by_name) || (isRolledBack ? entry.changed_by_name : null);
-      const rollbackReason = (details && details.rollback_reason) || (entry.action === 'Rollback' || isRollbackRecord ? details?.rollback_reason : null);
-      const rollbackTransactionId = (details && details.rollback_transaction_id) || (entry.action === 'Rollback' || isRollbackRecord ? details?.target_transaction_id : null);
-
-      const colors = entry.combinations?.combination_colors || details?.colors || [];
+      const isRolledBack = Boolean(entry.is_undone || details.is_rolled_back);
+      const isRollbackRecord = entry.action === 'Rollback' || entry.action === 'Undo' || Boolean(details.is_rollback_record);
 
       return {
         ...entry,
-        action: isRollbackRecord ? 'Rollback' : effectiveAction,
+        transaction_id: entry.id,
+        image_url: entry.image_url || entry.combinations?.image_url || entry.sarees?.image_url,
+        action: entry.action,
         is_rolled_back: isRolledBack,
         is_rollback: isRollbackRecord,
-        rollback_date: rollbackDate,
-        rollback_by: rollbackBy,
-        rollback_by_name: rollbackByName,
-        rollback_reason: rollbackReason,
-        rollback_transaction_id: rollbackTransactionId,
-        combination_colors: colors,
+        rollback_date: details.rollback_date || (isRolledBack ? entry.updated_at : null),
+        rollback_by_name: details.rollback_by_name || (isRolledBack ? entry.changed_by_name : null),
+        rollback_reason: details.rollback_reason || entry.reason,
+        combination_colors: entry.combinations?.combination_colors || details.colors || [],
+        supplier_name: entry.supplier_name || details.supplier_name,
+        customer_name: entry.customer_name || details.customer_name,
+        machine_name: entry.machine_name || details.machine_name,
+        invoice_number: entry.invoice_number || details.invoice_number,
         details
       };
     });
@@ -487,4 +415,49 @@ const getHistory = async (req, res) => {
   }
 };
 
-module.exports = { updateStock, undoStockChange, rollbackStockChange, getHistory };
+const getLedgerStats = async (req, res) => {
+  try {
+    const ownerId = req.user.owner_id;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { data: todayRecords } = await supabase
+      .from('stock_history')
+      .select('*')
+      .eq('owner_id', ownerId)
+      .gte('created_at', todayStart.toISOString());
+
+    let stockAdded = 0;
+    let deliveries = 0;
+    let stockDeliveries = 0;
+    let returns = 0;
+    let damage = 0;
+    let rollbacks = 0;
+
+    (todayRecords || []).forEach(r => {
+      const qty = Math.abs(r.new_stock - r.old_stock);
+      const act = r.action;
+      if (act === 'Stock' || act === 'Purchase Received') stockAdded += qty;
+      else if (act === 'Delivery') deliveries += 1;
+      else if (act === 'Stock Delivery') stockDeliveries += qty;
+      else if (act === 'Return') returns += qty;
+      else if (act === 'Damage') damage += qty;
+      else if (act === 'Rollback' || r.is_undone) rollbacks += 1;
+    });
+
+    res.json({
+      todayStockAdded: stockAdded,
+      todayDeliveries: deliveries,
+      todayStockDeliveries: stockDeliveries,
+      todayReturns: returns,
+      todayDamage: damage,
+      todayRollbacks: rollbacks
+    });
+  } catch (err) {
+    console.error('getLedgerStats error:', err);
+    res.status(500).json({ error: 'Failed to compute ledger stats' });
+  }
+};
+
+module.exports = { updateStock, undoStockChange, rollbackStockChange, getHistory, getLedgerStats };
+
