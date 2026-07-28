@@ -98,6 +98,12 @@ const RequestStockDialog = ({
     if (validationError) return;
     setSaving(true);
     setError('');
+
+    // ── Open WhatsApp FIRST (synchronously, before any await) ──
+    // Browsers block window.open() if called after an async await because
+    // the user gesture context is lost. Opening immediately preserves it.
+    const waWindow = window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+
     try {
       let dbAction = 'Increase';
       let reasonText = `Stock In via WhatsApp (+${qtyVal} pcs)`;
@@ -113,15 +119,22 @@ const RequestStockDialog = ({
         historyAction = 'Stock Delivery';
       }
 
-      // 1. Update actual stock in database
+      // 1. Update actual stock in database (in background after WA is open)
+      // ⚠️ Machine Delivery: NEVER send current_stock — stock must not change.
+      //    Only a history log entry is written. Sending current_stock risks
+      //    overwriting real DB stock with a stale dialog value.
       if (combination?.id) {
-        await combinationAPI.update(combination.id, {
-          current_stock: newStock,
+        const updatePayload = {
           action: dbAction,
           reason: reasonText,
           history_action: historyAction,
           quantity: qtyVal
-        });
+        };
+        if (!isMachineDelivery) {
+          // Only Stock In / Stock Delivery change the stock level
+          updatePayload.current_stock = newStock;
+        }
+        await combinationAPI.update(combination.id, updatePayload);
       }
 
       // 2. Log stock request (optional record-keeping, fail silently)
@@ -141,8 +154,6 @@ const RequestStockDialog = ({
         });
       } catch (_) { /* non-critical */ }
 
-      // 3. Open WhatsApp
-      openWhatsApp();
       setSent(true);
       setSnack(isMachineDelivery
         ? `✓ Machine Delivery: ${requestedQty} pcs recorded (Stock unchanged: ${currentStock}).`
@@ -150,7 +161,7 @@ const RequestStockDialog = ({
           ? `✓ Stock Delivery: -${requestedQty} pcs recorded. Stock is now ${newStock}.`
           : `✓ Stock Received: +${requestedQty} pcs recorded. Stock is now ${newStock}.`
       );
-      if (onSuccess) onSuccess();
+      // Do NOT call onSuccess here — dialog stays open until user clicks Close
     } catch (e) {
       setError(e?.response?.data?.error || 'Failed to update stock. Please try again.');
     } finally {
@@ -165,7 +176,13 @@ const RequestStockDialog = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
+      <Dialog
+        open={open}
+        onClose={() => { if (sent && onSuccess) onSuccess(); onClose(); }}
+        maxWidth="md"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{
@@ -185,7 +202,7 @@ const RequestStockDialog = ({
               </Typography>
             </Box>
           </Box>
-          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+          <IconButton onClick={() => { if (sent && onSuccess) onSuccess(); onClose(); }} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 0 }}>
@@ -342,7 +359,17 @@ const RequestStockDialog = ({
         {validationError && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{validationError}</Alert>}
 
         <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
-          <Button onClick={onClose} variant="outlined" size="large">Cancel</Button>
+          <Button
+            onClick={() => {
+              // If send was successful, notify parent on explicit close
+              if (sent && onSuccess) onSuccess();
+              onClose();
+            }}
+            variant="outlined"
+            size="large"
+          >
+            {sent ? 'Close' : 'Cancel'}
+          </Button>
           {sent && (
             <Button
               variant="outlined" color="success" size="large"

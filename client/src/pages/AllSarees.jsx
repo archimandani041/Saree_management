@@ -30,8 +30,9 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
-import RequestStockDialog from '../components/common/RequestStockDialog';
 import { getStockHealth } from '../constants/terms';
+import RequestStockDialog from '../components/common/RequestStockDialog';
+
 
 // Filter tabs mapped to the existing `status` filter values
 const STATUS_TABS = [
@@ -63,6 +64,21 @@ const StockBar = ({ total, min, max, barColor }) => {
         sx={{
           height: 7, borderRadius: 5, bgcolor: 'action.hover',
           '& .MuiLinearProgress-bar': { borderRadius: 5, bgcolor: barColor },
+        }}
+      />
+
+      {/* Request Stock Dialog — opens inline, user stays on this page */}
+      <RequestStockDialog
+        open={requestDialogOpen}
+        onClose={() => setRequestDialogOpen(false)}
+        combination={requestCombo}
+        beamName={requestBeamName}
+        seriesCode={requestSeriesCode}
+        sareeId={requestSareeId}
+        initialMovementType={requestMovementType}
+        onSuccess={() => {
+          fetchSarees();
+          setRequestDialogOpen(false);
         }}
       />
     </Box>
@@ -105,9 +121,9 @@ const AllSarees = () => {
   const [requestBeamName, setRequestBeamName] = useState('');
   const [requestSeriesCode, setRequestSeriesCode] = useState('');
   const [requestSareeId, setRequestSareeId] = useState('');
-  const [requestMovementType, setRequestMovementType] = useState('STOCK_IN');
+  const [requestMovementType, setRequestMovementType] = useState('STOCK');
 
-  const openStockDialog = (combo, beam, saree, type = 'STOCK_IN') => {
+  const openStockDialog = (combo, beam, saree, type = 'STOCK') => {
     // Inject saree-level brand so the WhatsApp message shows correct KP/KPR
     setRequestCombo({ ...combo, brand: saree.brand || combo.brand });
     setRequestBeamName(beam.beam_name);
@@ -944,20 +960,6 @@ const AllSarees = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Request Stock Dialog */}
-      <RequestStockDialog
-        open={requestDialogOpen}
-        onClose={() => setRequestDialogOpen(false)}
-        combination={requestCombo}
-        beamName={requestBeamName}
-        seriesCode={requestSeriesCode}
-        sareeId={requestSareeId}
-        initialMovementType={requestMovementType}
-        onSuccess={() => {
-          fetchSarees();
-          setRequestDialogOpen(false);
-        }}
-      />
     </Box>
   );
 };

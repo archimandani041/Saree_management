@@ -890,11 +890,21 @@ const updateCombination = async (req, res) => {
 
     const updateData = { updated_at: new Date().toISOString() };
     if (combination_name !== undefined) updateData.combination_name = combination_name ? combination_name.trim() : null;
-    if (current_stock !== undefined) updateData.current_stock = parseInt(current_stock);
     if (minimum_stock !== undefined) updateData.minimum_stock = parseInt(minimum_stock);
     if (notes !== undefined) updateData.notes = notes || null;
     if (status !== undefined) updateData.status = status;
     if (brand !== undefined) updateData.brand = brand;
+
+    // ── Stock update safety ──────────────────────────────────────────────────
+    // Machine Delivery must NEVER change the stock level. Ignore current_stock
+    // even if the client accidentally sends it (e.g. stale dialog value).
+    const isMachineDeliveryAction = [
+      'Delivery (Machine)', 'Delivery Machine', 'Delivery', 'No Change'
+    ].includes(req.body.history_action || req.body.action || '');
+
+    if (current_stock !== undefined && !isMachineDeliveryAction) {
+      updateData.current_stock = parseInt(current_stock);
+    }
 
     const { data: combo, error } = await supabase
       .from('combinations').update(updateData).eq('id', comboId).select().single();
@@ -920,7 +930,10 @@ const updateCombination = async (req, res) => {
       }
 
       const oldStock = old.current_stock ?? 0;
-      const newStockVal = current_stock !== undefined ? parseInt(current_stock) : oldStock;
+      // Machine Delivery: stock is always unchanged — use oldStock for both sides
+      const newStockVal = isMachineDeliveryAction
+        ? oldStock
+        : (current_stock !== undefined ? parseInt(current_stock) : oldStock);
 
       const dbAction = (historyAction === 'Delivery' || historyAction === 'Delivery (Machine)' || historyAction === 'Delivery Machine' || historyAction === 'No Change')
         ? 'Manual Edit'

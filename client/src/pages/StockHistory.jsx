@@ -7,7 +7,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { stockAPI, sareeAPI } from '../services/api';
+import { stockAPI, combinationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import InventoryLedgerDrawer from '../components/common/InventoryLedgerDrawer';
 import RequestStockDialog from '../components/common/RequestStockDialog';
@@ -108,35 +108,30 @@ const StockHistory = () => {
 
   const handleOpenRequestStock = async (item) => {
     if (!item?.combination_id) return;
-
+    // Always fetch fresh combination data to avoid stale stock values
     try {
       const { data } = await combinationAPI.getById(item.combination_id);
       if (data?.combination) {
         const combo = data.combination;
-        setRequestCombo({
-          ...combo,
-          brand: combo.brand || combo.beams?.sarees?.brand || 'KP'
-        });
+        setRequestCombo({ ...combo, brand: combo.brand || combo.beams?.sarees?.brand || 'KP' });
         setRequestBeamName(combo.beams?.beam_name || item.beam_name || 'Beam');
-        setRequestSeriesCode(combo.beams?.sarees?.series_code || item.sarees?.series_code || item.series_code || 'Saree');
+        setRequestSeriesCode(combo.beams?.sarees?.series_code || item.series_code || 'Saree');
         setRequestSareeId(combo.beams?.saree_id || item.saree_id);
         setRequestDialogOpen(true);
         return;
       }
     } catch (_) {}
-
-    // Fallback using populated join item
-    const comboData = {
+    // Fallback using history row data
+    setRequestCombo({
       id: item.combination_id,
       combination_name: item.combination_name || 'Combination',
-      current_stock: item.combinations?.current_stock ?? item.new_stock ?? 0,
+      current_stock: item.new_stock ?? 0,
       minimum_stock: item.combinations?.minimum_stock ?? 20,
       combination_colors: item.combinations?.combination_colors || [],
-      brand: item.combinations?.brand || item.sarees?.brand || 'KP'
-    };
-    setRequestCombo(comboData);
+      brand: item.combinations?.brand || 'KP'
+    });
     setRequestBeamName(item.beam_name || 'Beam');
-    setRequestSeriesCode(item.sarees?.series_code || item.series_code || 'Saree');
+    setRequestSeriesCode(item.series_code || 'Saree');
     setRequestSareeId(item.saree_id);
     setRequestDialogOpen(true);
   };
@@ -533,7 +528,8 @@ const StockHistory = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Request Stock / Stock Movement via WhatsApp Dialog */}
+
+      {/* Request Stock Dialog — opens inline, user stays on this page */}
       <RequestStockDialog
         open={requestDialogOpen}
         onClose={() => setRequestDialogOpen(false)}

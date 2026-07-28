@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
-import { getStockHealth } from '../constants/terms';
 import RequestStockDialog from '../components/common/RequestStockDialog';
+import { getStockHealth } from '../constants/terms';
+
+
 import {
   Box, Paper, Typography, Chip, Button, Alert, CircularProgress, LinearProgress
 } from '@mui/material';
@@ -24,6 +26,7 @@ const LowStock = () => {
   const [selectedBeamName, setSelectedBeamName] = useState('');
   const [selectedSeriesCode, setSelectedSeriesCode] = useState('');
   const [selectedSareeId, setSelectedSareeId] = useState('');
+
 
   const fetchLowStockSarees = async () => {
     setLoading(true);
@@ -80,7 +83,7 @@ const LowStock = () => {
       navigate(`/sarees/${item.saree.id}`);
       return;
     }
-    setSelectedCombo(item.combo);
+    setSelectedCombo({ ...item.combo, brand: item.saree.brand || item.combo.brand });
     setSelectedBeamName(item.beam?.beam_name || 'Beam');
     setSelectedSeriesCode(item.saree.series_code || '');
     setSelectedSareeId(item.saree.id);
@@ -229,7 +232,7 @@ const LowStock = () => {
         </Box>
       )}
 
-      {/* Request Stock Dialog */}
+      {/* Request Stock Dialog — opens inline, user stays on this page */}
       <RequestStockDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -237,7 +240,7 @@ const LowStock = () => {
         beamName={selectedBeamName}
         seriesCode={selectedSeriesCode}
         sareeId={selectedSareeId}
-        initialMovementType="STOCK_IN"
+        initialMovementType="STOCK"
         onSuccess={() => {
           fetchLowStockSarees();
           setDialogOpen(false);
