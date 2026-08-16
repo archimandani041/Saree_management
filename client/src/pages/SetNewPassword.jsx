@@ -41,8 +41,8 @@ const SetNewPassword = () => {
       if (updateError) throw updateError;
 
       setDone(true);
-      // Redirect to login after 2.5 seconds
-      setTimeout(() => navigate('/login', { replace: true }), 2500);
+      // Redirect to dashboard after 2.5 seconds
+      setTimeout(() => navigate('/', { replace: true }), 2500);
     } catch (err) {
       setError(err.message || 'Failed to update password. Please try again.');
     } finally {
@@ -179,7 +179,7 @@ const SetNewPassword = () => {
               Password updated!
             </Typography>
             <Alert severity="success" sx={{ bgcolor: 'rgba(34,197,94,0.08)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 2, width: '100%' }}>
-              Your password has been changed. Redirecting to login…
+              Your password has been changed. Redirecting to dashboard…
             </Alert>
           </Box>
         )}
