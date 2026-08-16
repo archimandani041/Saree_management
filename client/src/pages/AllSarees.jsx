@@ -27,11 +27,16 @@ import {
   KeyboardArrowRight,
   WhatsApp as WhatsAppIcon,
   MoreVert as MoreVertIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Checkroom as SareeIcon
 } from '@mui/icons-material';
 import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
 import { getStockHealth } from '../constants/terms';
 import RequestStockDialog from '../components/common/RequestStockDialog';
+import PageHeader from '../components/common/PageHeader';
+import EmptyState from '../components/common/EmptyState';
+import StatusBadge from '../components/common/StatusBadge';
+import { TableSkeleton } from '../components/common/SkeletonLoader';
 
 
 // Filter tabs mapped to the existing `status` filter values
@@ -457,30 +462,25 @@ const AllSarees = () => {
 
   return (
     <Box>
-      {/* Title Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-        <Box>
-          <Typography variant="h4" sx={{ mb: 0.5 }}>
-            Sarees Inventory
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Browse, manage, and audit your saree stock
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExportExcel}>
+      <PageHeader
+        title="Sarees Inventory"
+        icon={<SareeIcon />}
+        subtitle={`${total.toLocaleString()} items in collection · Browse, manage and audit stock`}
+        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Sarees Inventory' }]}
+        actions={<>
+          <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExportExcel} size="small">
             Export
           </Button>
           {(isAdmin || isStaff) && (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/sarees/add')}>
-              Add New Saree
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/sarees/add')} size="small">
+              Add Saree
             </Button>
           )}
-        </Box>
-      </Box>
+        </>}
+      />
 
       {/* Toolbar: filter tabs + search + advanced filters */}
-      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 4 }}>
+      <Paper sx={{ p: 2.5, mb: 3, borderRadius: '10px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
           {/* Pill tabs */}
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -588,16 +588,18 @@ const AllSarees = () => {
 
       {/* Table */}
       {loading && sarees.length > 0 && (
-        <LinearProgress sx={{ height: 3, mb: 2, borderRadius: 1.5 }} />
+        <LinearProgress sx={{ height: 2, mb: 2, borderRadius: 0 }} />
       )}
       {loading && sarees.length === 0 ? (
-        <Paper sx={{ p: 2, borderRadius: 4 }}>
-          {[...Array(6)].map((_, index) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
-              <Skeleton variant="rounded" width={46} height={46} />
-              <Skeleton height={28} sx={{ flex: 1 }} />
-            </Box>
-          ))}
+        <Paper sx={{ borderRadius: '10px', overflow: 'hidden' }}>
+          <TableSkeleton rows={7} cols={6} />
+        </Paper>
+      ) : sarees.length === 0 ? (
+        <Paper sx={{ borderRadius: '10px' }}>
+          <EmptyState
+            variant={hasAnyFilter ? 'no-results' : 'no-products'}
+            onCta={hasAnyFilter ? undefined : () => navigate('/sarees/add')}
+          />
         </Paper>
       ) : (
         <TableContainer component={Paper} sx={{ borderRadius: 4 }}>

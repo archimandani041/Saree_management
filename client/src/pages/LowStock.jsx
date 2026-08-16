@@ -1,19 +1,17 @@
-/**
- * Low Stock — Action Page (spec §12)
- * Every item is directly actionable: shows shortage, AI recommendation, and Request Stock button.
- */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import RequestStockDialog from '../components/common/RequestStockDialog';
 import { getStockHealth } from '../constants/terms';
-
+import PageHeader from '../components/common/PageHeader';
+import EmptyState from '../components/common/EmptyState';
+import { ListSkeleton } from '../components/common/SkeletonLoader';
 
 import {
-  Box, Paper, Typography, Chip, Button, Alert, CircularProgress, LinearProgress
+  Box, Paper, Typography, Chip, Button, LinearProgress
 } from '@mui/material';
-import { WarningAmber, WhatsApp as WhatsAppIcon } from '@mui/icons-material';
+import { WarningAmber, WhatsApp as WhatsAppIcon, Visibility as ViewIcon } from '@mui/icons-material';
 
 const LowStock = () => {
   const navigate = useNavigate();
@@ -92,29 +90,31 @@ const LowStock = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress sx={{ color: 'primary.main' }} />
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <PageHeader
+          title="Needs Stock"
+          icon={<WarningAmber />}
+          subtitle="Items below minimum stock levels — take action immediately."
+        />
+        <ListSkeleton rows={5} />
       </Box>
     );
   }
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-          <WarningAmber sx={{ color: 'warning.main' }} /> Needs Stock
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Items below minimum stock levels. Request stock directly from this page.
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Needs Stock"
+        icon={<WarningAmber />}
+        subtitle={`${lowItems.length} item${lowItems.length !== 1 ? 's' : ''} below minimum stock levels. Take action immediately.`}
+      />
 
       {lowItems.length === 0 ? (
-        <Alert severity="success" sx={{ borderRadius: 3, p: 3 }}>
-          <Typography variant="body1" sx={{ fontWeight: 700 }}>All stock levels are healthy!</Typography>
-          No items are currently below their minimum stock thresholds.
-        </Alert>
+        <EmptyState
+          variant="all-clear"
+          title="All stock levels are healthy!"
+          description="No items are currently below their minimum stock thresholds. Great work keeping inventory topped up!"
+        />
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {lowItems.map((item, idx) => {
@@ -123,16 +123,17 @@ const LowStock = () => {
             const pct = item.min > 0 ? Math.round((item.stock / item.min) * 100) : 0;
 
             return (
-              <Paper
+              <Box
                 key={`${item.saree.id}-${item.combo?.id || idx}`}
                 sx={{
-                  p: 2.5,
-                  borderRadius: 3,
+                  p: { xs: 2, sm: 2.5 },
+                  bgcolor: 'background.paper',
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderLeft: `4px solid ${health.color}`,
-                  transition: 'box-shadow 0.15s',
-                  '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }
+                  borderLeft: `3px solid ${health.color}`,
+                  borderRadius: '10px',
+                  transition: 'box-shadow 0.18s ease',
+                  '&:hover': { boxShadow: '0 4px 20px rgba(59,17,26,0.07)' },
                 }}
               >
                 {/* Top: severity badge */}
@@ -213,20 +214,21 @@ const LowStock = () => {
                     size="small"
                     startIcon={<WhatsAppIcon />}
                     onClick={() => openRequest(item)}
-                    sx={{ fontWeight: 700, borderRadius: 2, textTransform: 'none', bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
+                    sx={{ fontWeight: 700, borderRadius: '6px', textTransform: 'none', bgcolor: '#16A34A', '&:hover': { bgcolor: '#15803D' } }}
                   >
                     Request Stock
                   </Button>
                   <Button
                     variant="outlined"
                     size="small"
+                    startIcon={<ViewIcon />}
                     onClick={() => navigate(`/sarees/${item.saree.id}`)}
-                    sx={{ fontWeight: 600, borderRadius: 2, textTransform: 'none' }}
+                    sx={{ fontWeight: 600, borderRadius: '6px', textTransform: 'none' }}
                   >
-                    View Details
+                    View
                   </Button>
                 </Box>
-              </Paper>
+              </Box>
             );
           })}
         </Box>

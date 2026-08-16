@@ -27,6 +27,9 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
+import PageHeader from '../components/common/PageHeader';
+import StatusBadge from '../components/common/StatusBadge';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 
 
@@ -177,44 +180,28 @@ const SareeDetail = () => {
   return (
     <Box className="printable-area" sx={{ position: 'relative' }}>
       {loading && saree && (
-        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
+        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 2, borderRadius: 0 }} color="primary" />
       )}
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, displayPrint: 'none' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <IconButton onClick={() => navigate('/sarees')} color="primary"><ArrowBackIcon /></IconButton>
-          <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
-            {saree.sari_name || 'Unnamed Saree'}
-          </Typography>
-          <Chip label={saree.series_code} color="primary" sx={{ fontWeight: 700 }} />
-          {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.brand).filter(Boolean)) || [])).map(b => (
-            <Chip key={b} label={b} color="secondary" size="small" sx={{ fontWeight: 700 }} />
-          ))}
-          {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.status).filter(Boolean)) || [])).map(s => (
-            <Chip
-              key={s}
-              label={s}
-              variant="outlined"
-              color={s === 'In Stock' ? 'success' : 'info'}
-              size="small"
-              sx={{ fontWeight: 700 }}
-            />
-          ))}
-          <IconButton onClick={() => toggleFavorite(saree.id)} color="error">
+      
+      <PageHeader
+        title={saree.sari_name || 'Unnamed Saree'}
+        subtitle={`Series Code: ${saree.series_code} · Manage details and combination stock levels`}
+        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Inventory', href: '/sarees' }, { label: saree.series_code }]}
+        icon={<IconButton onClick={() => navigate('/sarees')} color="primary" sx={{ p: 0.5, mr: 1 }}><ArrowBackIcon /></IconButton>}
+        actions={<>
+          <IconButton onClick={() => toggleFavorite(saree.id)} color="error" sx={{ mr: 1 }}>
             {isFavorite(saree.id) ? <FavoriteIcon /> : <FavoriteBorderIcon />}
           </IconButton>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>Print Stock Sheet</Button>
+          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()} size="small">Print</Button>
           {(isAdmin || isStaff) && (
             <>
-              <Button variant="outlined" color="secondary" startIcon={<FiberNewIcon />} onClick={() => { setManualSeriesLetter(saree?.series_letter || 'A'); setSeriesDialogOpen(true); }}>Series Options</Button>
-              <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/sarees/edit/${saree.id}`)}>Edit Saree</Button>
-              <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteConfirmOpen(true)}>Delete Saree</Button>
+              <Button variant="outlined" startIcon={<FiberNewIcon />} onClick={() => { setManualSeriesLetter(saree?.series_letter || 'A'); setSeriesDialogOpen(true); }} size="small">Series</Button>
+              <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/sarees/edit/${saree.id}`)} size="small">Edit</Button>
+              <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteConfirmOpen(true)} size="small">Delete</Button>
             </>
           )}
-        </Box>
-      </Box>
+        </>}
+      />
 
       {error && <Alert severity="error" sx={{ mb: 3, displayPrint: 'none' }}>{error}</Alert>}
       {actionSuccess && <Alert severity="success" sx={{ mb: 3, displayPrint: 'none' }}>{actionSuccess}</Alert>}
@@ -266,7 +253,7 @@ const SareeDetail = () => {
                   <TableRow><TableCell sx={{ fontWeight: 700 }}>Total Stock</TableCell><TableCell sx={{ fontWeight: 800 }}>{totalStock} pcs</TableCell></TableRow>
                   <TableRow><TableCell sx={{ fontWeight: 700 }}>Price</TableCell><TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{saree.price != null ? `₹${Number(saree.price).toLocaleString('en-IN')}` : '—'}</TableCell></TableRow>
                   <TableRow><TableCell sx={{ fontWeight: 700 }}>Stock Status</TableCell><TableCell>
-                    <Chip label={statusInfo.label} color={statusInfo.color} size="small" sx={{ bgcolor: statusInfo.bg, fontWeight: 700 }} />
+                    <StatusBadge variant={statusInfo.label.toLowerCase().replace(' ', '-')} label={statusInfo.label} />
                   </TableCell></TableRow>
                   <TableRow><TableCell sx={{ fontWeight: 700 }}>Beams</TableCell><TableCell>{saree.beams?.length || 0}</TableCell></TableRow>
                 </TableBody>
@@ -468,40 +455,16 @@ const SareeDetail = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>Delete Saree</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700 }}>
-              Sari Number:
-            </Typography>
-            <Typography variant="h5" color="primary.main" sx={{ fontWeight: 800 }}>
-              {saree?.series_code}
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 700, color: 'error.main' }}>
-            This will permanently delete:
-          </Typography>
-          <Box sx={{ pl: 1, mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              <span>• All Beams</span>
-              <span>• All Combinations</span>
-              <span>• All Color Rows</span>
-              <span>• Stock History</span>
-              <span>• Stock Requests</span>
-              <span>• Activity Logs</span>
-              <span>• Product Image</span>
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button onClick={() => setDeleteConfirmOpen(false)} variant="outlined">Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete Permanently</Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Saree"
+        message="Are you sure you want to delete this saree? This will permanently remove all associated beams, combinations, color variants, stock history, and media files."
+        itemName={saree?.sari_name ? `${saree.series_code} — ${saree.sari_name}` : saree?.series_code}
+        confirmLabel="Delete Permanently"
+        variant="delete"
+      />
 
       {/* Success Dialog */}
       <Dialog
