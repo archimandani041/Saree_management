@@ -86,7 +86,7 @@ const AuthCallback = () => {
       fontFamily: '"Playfair Display", Georgia, serif',
       color: '#322D29', fontWeight: 800, letterSpacing: '0.02em', mb: 0.5
     }}>
-      KP <Box component="span" sx={{ color: '#72383D' }}>Creation</Box>
+      KP <Box component="span" sx={{ color: 'primary.light' }}>Creation</Box>
     </Typography>
   );
 
@@ -108,7 +108,7 @@ const AuthCallback = () => {
 
         {status === 'verifying' && (
           <>
-            <CircularProgress size={48} sx={{ color: '#72383D' }} />
+            <CircularProgress size={48} sx={{ color: 'primary.light' }} />
             <Typography sx={{ color: '#6B6360', fontSize: '0.95rem' }}>
               Verifying your link…
             </Typography>
@@ -118,7 +118,7 @@ const AuthCallback = () => {
         {status === 'success' && (
           <>
             <CheckCircle sx={{ fontSize: 56, color: '#22C55E' }} />
-            <Alert severity="success" sx={{ bgcolor: 'rgba(34,197,94,0.08)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 2, width: '100%' }}>
+            <Alert severity="success" sx={{ bgcolor: 'rgba(34,197,94,0.08)', color: 'success.main', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 2, width: '100%' }}>
               {message}
             </Alert>
           </>
@@ -126,8 +126,8 @@ const AuthCallback = () => {
 
         {status === 'recovery' && (
           <>
-            <LockReset sx={{ fontSize: 56, color: '#72383D' }} />
-            <Alert severity="info" sx={{ bgcolor: 'rgba(114,56,61,0.06)', color: '#72383D', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2, width: '100%' }}>
+            <LockReset sx={{ fontSize: 56, color: 'primary.light' }} />
+            <Alert severity="info" sx={{ bgcolor: 'rgba(114,56,61,0.06)', color: 'primary.light', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2, width: '100%' }}>
               {message}
             </Alert>
           </>
@@ -135,13 +135,13 @@ const AuthCallback = () => {
 
         {status === 'error' && (
           <>
-            <ErrorIcon sx={{ fontSize: 56, color: '#72383D' }} />
-            <Alert severity="error" sx={{ bgcolor: 'rgba(114,56,61,0.08)', color: '#72383D', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2, width: '100%' }}>
+            <ErrorIcon sx={{ fontSize: 56, color: 'primary.light' }} />
+            <Alert severity="error" sx={{ bgcolor: 'rgba(114,56,61,0.08)', color: 'primary.light', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2, width: '100%' }}>
               {message}
             </Alert>
             <Typography
               onClick={() => navigate('/login')}
-              sx={{ color: '#72383D', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
+              sx={{ color: 'primary.light', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
             >
               Back to Login
             </Typography>

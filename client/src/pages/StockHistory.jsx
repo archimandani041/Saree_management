@@ -39,10 +39,10 @@ import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
 
 // Action badges and colors configuration for 20 event types
 const ACTION_BADGES = {
-  'Stock In': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
-  'Stock': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
-  'Increase': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
-  'Stock Added': { label: 'STOCK IN', bg: '#DCFCE7', color: '#15803D' },
+  'Stock In': { label: 'STOCK IN', bg: '#DCFCE7', color: 'success.dark' },
+  'Stock': { label: 'STOCK IN', bg: '#DCFCE7', color: 'success.dark' },
+  'Increase': { label: 'STOCK IN', bg: '#DCFCE7', color: 'success.dark' },
+  'Stock Added': { label: 'STOCK IN', bg: '#DCFCE7', color: 'success.dark' },
 
   'Stock Delivery': { label: 'STOCK DELIVERY', bg: '#FFEDD5', color: '#C2410C' },
   'Decrease': { label: 'STOCK DELIVERY', bg: '#FFEDD5', color: '#C2410C' },
@@ -52,23 +52,23 @@ const ACTION_BADGES = {
   'Delivery Machine': { label: 'DELIVERY (MACHINE)', bg: '#DBEAFE', color: '#1D4ED8' },
 
   'Return': { label: 'RETURN', bg: '#F3E8FF', color: '#7E22CE' },
-  'Damage': { label: 'DAMAGE', bg: '#FEE2E2', color: '#DC2626' },
+  'Damage': { label: 'DAMAGE', bg: 'error.light', color: 'error.main' },
   'Transfer': { label: 'TRANSFER', bg: '#E0F2FE', color: '#0369A1' },
   'Manual Adjustment': { label: 'ADJUSTMENT', bg: '#FEF9C3', color: '#A16207' },
   'Manual Edit': { label: 'ADJUSTMENT', bg: '#FEF9C3', color: '#A16207' },
-  'WhatsApp Import': { label: 'WA IMPORT', bg: '#DCFCE7', color: '#16A34A' },
-  'WhatsApp Stock Request': { label: 'WA REQUEST', bg: '#DCFCE7', color: '#16A34A' },
+  'WhatsApp Import': { label: 'WA IMPORT', bg: '#DCFCE7', color: 'success.main' },
+  'WhatsApp Stock Request': { label: 'WA REQUEST', bg: '#DCFCE7', color: 'success.main' },
   'Purchase Request Created': { label: 'PURCHASE REQ', bg: '#DBEAFE', color: '#1D4ED8' },
-  'Purchase Received': { label: 'PURCHASE REC', bg: '#DCFCE7', color: '#15803D' },
+  'Purchase Received': { label: 'PURCHASE REC', bg: '#DCFCE7', color: 'success.dark' },
   'Combination Created': { label: 'COMBO CREATE', bg: '#DBEAFE', color: '#1D4ED8' },
   'Combination Edited': { label: 'COMBO EDIT', bg: '#FEF9C3', color: '#A16207' },
-  'Combination Deleted': { label: 'COMBO DELETE', bg: '#FEE2E2', color: '#DC2626' },
+  'Combination Deleted': { label: 'COMBO DELETE', bg: 'error.light', color: 'error.main' },
   'Image Uploaded': { label: 'IMG UPLOAD', bg: '#DBEAFE', color: '#1D4ED8' },
   'Image Replaced': { label: 'IMG REPLACE', bg: '#FEF9C3', color: '#A16207' },
-  'Image Deleted': { label: 'IMG DELETE', bg: '#FEE2E2', color: '#DC2626' },
-  'Rollback': { label: 'ROLLBACK', bg: '#F3F4F6', color: '#4B5563' },
-  'Undo': { label: 'ROLLBACK', bg: '#F3F4F6', color: '#4B5563' },
-  'Import Failed': { label: 'IMPORT FAIL', bg: '#FEE2E2', color: '#DC2626' },
+  'Image Deleted': { label: 'IMG DELETE', bg: 'error.light', color: 'error.main' },
+  'Rollback': { label: 'ROLLBACK', bg: 'action.hover', color: '#4B5563' },
+  'Undo': { label: 'ROLLBACK', bg: 'action.hover', color: '#4B5563' },
+  'Import Failed': { label: 'IMPORT FAIL', bg: 'error.light', color: 'error.main' },
   'Duplicate Updated': { label: 'DUP UPDATE', bg: '#FFEDD5', color: '#C2410C' },
 };
 
@@ -356,7 +356,7 @@ const StockHistory = () => {
                     </TableCell>
                   </TableRow>
                 ) : history.map((item) => {
-                  const badge = ACTION_BADGES[item.action] || { label: item.action, bg: '#F3F4F6', color: '#374151' };
+                  const badge = ACTION_BADGES[item.action] || { label: item.action, bg: 'action.hover', color: '#374151' };
                   const isRolledBack = item.is_rolled_back;
 
                   return (

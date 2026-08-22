@@ -84,7 +84,7 @@ const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, onDeleteRecord
           </Paper>
 
           {/* Action & Stock Summary Card */}
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 2.5, bgcolor: item.is_rolled_back ? '#FEF2F2' : '#F0FDF4' }}>
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 2.5, bgcolor: item.is_rolled_back ? 'error.light' : 'success.light' }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase' }}>
               Stock Movement
             </Typography>
@@ -157,14 +157,14 @@ const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, onDeleteRecord
 
           {/* WhatsApp message snippet if present */}
           {item.whatsapp_message && (
-            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 2.5, bgcolor: '#F0FDF4', borderColor: '#86EFAC' }}>
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 2.5, bgcolor: 'success.light', borderColor: 'success.main' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <WhatsAppIcon sx={{ color: '#16A34A', fontSize: 18 }} />
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#15803D' }}>
+                <WhatsAppIcon sx={{ color: 'success.main', fontSize: 18 }} />
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.dark' }}>
                   RELATED WHATSAPP MESSAGE
                 </Typography>
               </Box>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#166534' }}>
+              <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: 'success.dark' }}>
                 {item.whatsapp_message}
               </Typography>
             </Paper>
@@ -174,7 +174,7 @@ const InventoryLedgerDrawer = ({ open, onClose, item, onRollback, onDeleteRecord
           <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Navigation & Quick Actions</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
             {onUpdateStock && (
-              <Button size="small" variant="contained" sx={{ bgcolor: '#25D366', color: '#fff', fontWeight: 800, '&:hover': { bgcolor: '#16A34A' } }} startIcon={<WhatsAppIcon />} onClick={() => { onClose(); onUpdateStock(item); }}>
+              <Button size="small" variant="contained" sx={{ bgcolor: '#25D366', color: 'common.white', fontWeight: 800, '&:hover': { bgcolor: 'success.main' } }} startIcon={<WhatsAppIcon />} onClick={() => { onClose(); onUpdateStock(item); }}>
                 Update Stock (WhatsApp)
               </Button>
             )}

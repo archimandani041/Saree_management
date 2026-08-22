@@ -9,24 +9,28 @@ import {
   IconButton, Tooltip, Alert, Skeleton, Button, Dialog, DialogTitle,
   DialogContent, DialogActions, Snackbar, Grid, LinearProgress
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import HistoryIcon from '@mui/icons-material/History';
+import InboxIcon from '@mui/icons-material/Inbox';
 import { stockRequestAPI } from '../services/api';
 import { MOVEMENT_LABELS } from '../constants/terms';
+import PageHeader from '../components/common/PageHeader';
+import EmptyState from '../components/common/EmptyState';
 
 const PIPELINE_STEPS = ['Requested', 'Confirmed', 'Received'];
-const STATUS_COLORS = { Requested: '#F59E0B', Confirmed: '#38BDF8', Received: '#22C55E', Cancelled: '#EF4444' };
+const STATUS_COLORS = { Requested: 'warning.main', Confirmed: 'info.main', Received: 'success.main', Cancelled: 'error.main' };
 
 const PipelineStepper = ({ currentStatus }) => {
   if (currentStatus === 'Cancelled') {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
-        <Typography variant="caption" sx={{ fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cancelled</Typography>
+        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'error.main' }} />
+        <Typography variant="caption" sx={{ fontWeight: 800, color: 'error.main', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cancelled</Typography>
       </Box>
     );
   }
@@ -36,9 +40,6 @@ const PipelineStepper = ({ currentStatus }) => {
       {PIPELINE_STEPS.map((step, idx) => {
         const done = idx <= currentIdx;
         const active = idx === currentIdx;
-        let dotColor = '#EAE6E1';
-        if (active) dotColor = STATUS_COLORS[step];
-        else if (done) dotColor = '#241C1A';
 
         return (
           <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } }}>
@@ -47,19 +48,19 @@ const PipelineStepper = ({ currentStatus }) => {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                bgcolor: dotColor,
+                bgcolor: active ? STATUS_COLORS[step] : (done ? 'text.primary' : 'divider'),
                 transition: 'bgcolor 0.2s ease',
               }} />
               <Typography variant="caption" sx={{
-                fontWeight: active ? 750 : (done ? 600 : 500),
-                color: active ? 'text.primary' : 'text.secondary',
+                fontWeight: active ? 800 : (done ? 650 : 500),
+                color: active ? 'text.primary' : (done ? 'text.primary' : 'text.disabled'),
                 fontSize: '0.75rem',
               }}>
                 {step}
               </Typography>
             </Box>
             {idx < PIPELINE_STEPS.length - 1 && (
-              <Box sx={{ width: { xs: 20, sm: 40 }, height: 1, bgcolor: '#EAE6E1' }} />
+              <Box sx={{ width: { xs: 16, sm: 32 }, height: 1, bgcolor: 'divider' }} />
             )}
           </Box>
         );
@@ -76,6 +77,7 @@ const StockRequests = () => {
   const [receiveConfirm, setReceiveConfirm] = useState(null);
   const [snack, setSnack] = useState('');
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -108,6 +110,7 @@ const StockRequests = () => {
 
   const confirmReceive = async () => {
     if (!receiveConfirm) return;
+    setActionLoading(true);
     try {
       await stockRequestAPI.updateStatus(receiveConfirm.id, { status: 'Received' });
       setSnack('Marked as Received — stock updated');
@@ -115,10 +118,13 @@ const StockRequests = () => {
       fetchRequests();
     } catch (e) {
       setError('Failed to mark as received');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleDelete = async () => {
+    setActionLoading(true);
     try {
       await stockRequestAPI.delete(deleteId);
       setDeleteId(null);
@@ -126,6 +132,8 @@ const StockRequests = () => {
       fetchRequests();
     } catch (e) {
       setError('Failed to delete request');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -146,63 +154,58 @@ const StockRequests = () => {
   requests.forEach(r => { if (stats[r.status] !== undefined) stats[r.status]++; });
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 1, md: 3 }, py: 1 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 0, md: 1 }, py: 1 }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h1" sx={{ fontSize: '2.5rem', fontWeight: 800, mb: 1, letterSpacing: '-0.02em', color: '#241C1A' }}>
-            Stock Requests
-          </Typography>
-          <Typography variant="body1" sx={{ color: '#7C726A', fontSize: '0.95rem' }}>
-            Track supplier orders from request to receipt
-          </Typography>
-        </Box>
-        <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel id="filter-status-label" sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter Status</InputLabel>
-          <Select
-            labelId="filter-status-label"
-            value={statusFilter}
-            label="Filter Status"
-            onChange={e => setStatusFilter(e.target.value)}
-            sx={{
-              borderRadius: '6px',
-              bgcolor: '#FFFFFF',
-              borderColor: '#EAE6E1',
-              fontSize: '0.85rem',
-              fontWeight: 650,
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#EAE6E1' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#AC9E7A' },
-            }}
-          >
-            <MenuItem value="">All Statuses</MenuItem>
-            <MenuItem value="Requested">Requested</MenuItem>
-            <MenuItem value="Confirmed">Confirmed</MenuItem>
-            <MenuItem value="Received">Received</MenuItem>
-            <MenuItem value="Cancelled">Cancelled</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+      <PageHeader
+        title="Stock Requests"
+        icon={<InboxIcon />}
+        subtitle="Track supplier orders from request to warehouse receipt"
+        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Stock Requests' }]}
+        actions={
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel id="filter-status-label" sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter Status</InputLabel>
+            <Select
+              labelId="filter-status-label"
+              value={statusFilter}
+              label="Filter Status"
+              onChange={e => setStatusFilter(e.target.value)}
+              sx={{
+                borderRadius: '8px',
+                fontSize: '0.84rem',
+                fontWeight: 650,
+              }}
+            >
+              <MenuItem value="">All Statuses</MenuItem>
+              <MenuItem value="Requested">Requested</MenuItem>
+              <MenuItem value="Confirmed">Confirmed</MenuItem>
+              <MenuItem value="Received">Received</MenuItem>
+              <MenuItem value="Cancelled">Cancelled</MenuItem>
+            </Select>
+          </FormControl>
+        }
+      />
 
-      {/* Stats pills — redesigned as clean catalog stats */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
+      {/* Stats pills */}
+      <Grid container spacing={2} sx={{ mb: 3.5 }}>
         {Object.entries(stats).map(([status, count]) => {
           const isFilterActive = statusFilter === status;
           return (
-            <Grid xs={6} sm={3} key={status}>
+            <Grid size={{ xs: 6, sm: 3 }} key={status}>
               <Paper
                 onClick={() => setStatusFilter(isFilterActive ? '' : status)}
                 sx={{
                   p: 2.5,
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   textAlign: 'center',
                   cursor: 'pointer',
-                  border: isFilterActive ? '1px solid #3B111A' : '1px solid #EAE6E1',
-                  bgcolor: '#FAF8F5',
+                  border: '1px solid',
+                  borderColor: isFilterActive ? 'primary.main' : 'divider',
+                  bgcolor: isFilterActive ? 'sidebar.active' : 'background.paper',
                   boxShadow: 'none',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    borderColor: '#3B111A',
-                    bgcolor: '#FFFFFF'
+                    borderColor: 'primary.main',
+                    boxShadow: (theme) => theme.palette.surface?.shadowHover || '0 4px 16px rgba(59,17,26,0.06)',
                   }
                 }}
               >
@@ -210,10 +213,10 @@ const StockRequests = () => {
                   variant="h2"
                   sx={{
                     fontFamily: '"Playfair Display", Georgia, serif',
-                    fontWeight: 450,
-                    fontSize: '2.2rem',
+                    fontWeight: 700,
+                    fontSize: '2rem',
                     mb: 0.5,
-                    color: '#241C1A'
+                    color: 'text.primary'
                   }}
                 >
                   {count}
@@ -221,11 +224,11 @@ const StockRequests = () => {
                 <Typography
                   variant="caption"
                   sx={{
-                    fontWeight: 750,
+                    fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                     fontSize: '0.68rem',
-                    color: '#7C726A'
+                    color: 'text.secondary'
                   }}
                 >
                   {status}
@@ -239,21 +242,24 @@ const StockRequests = () => {
       {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '8px' }}>{error}</Alert>}
 
       {loading && requests.length > 0 && (
-        <LinearProgress sx={{ height: 2, mb: 3, bgcolor: '#FAF8F5', '& .MuiLinearProgress-bar': { bgcolor: 'primary.main' } }} />
+        <LinearProgress sx={{ height: 2, mb: 3, borderRadius: 0 }} />
       )}
 
       {/* Request cards */}
       {loading && requests.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={130} sx={{ borderRadius: '8px', bgcolor: '#FAF8F5' }} />)}
+          {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={130} sx={{ borderRadius: '10px' }} />)}
         </Box>
       ) : requests.length === 0 ? (
-        <Paper sx={{ p: 6, borderRadius: '8px', textAlign: 'center', border: '1px solid #EAE6E1', bgcolor: '#FFFFFF', boxShadow: 'none' }}>
-          <HistoryIcon sx={{ fontSize: 40, color: '#AC9E7A', mb: 1.5 }} />
-          <Typography sx={{ color: '#7C726A', fontWeight: 600 }}>No stock requests yet.</Typography>
+        <Paper sx={{ p: 4, borderRadius: '10px' }}>
+          <EmptyState
+            variant="no-products"
+            title="No stock requests found"
+            description="When low stock items are ordered via WhatsApp, requests will be tracked here in real-time."
+          />
         </Paper>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {requests.map(req => {
             const movementLabel = getMovementLabel(req);
             const isDelivery = movementLabel === 'Delivery Out';
@@ -262,35 +268,39 @@ const StockRequests = () => {
               <Paper
                 key={req.id}
                 sx={{
-                  p: 3,
-                  borderRadius: '8px',
-                  border: '1px solid #EAE6E1',
-                  bgcolor: '#FFFFFF',
+                  p: 2.5,
+                  borderRadius: '10px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
                   boxShadow: 'none',
-                  transition: 'border-color 0.2s ease',
-                  '&:hover': { borderColor: '#AC9C94' }
+                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  '&:hover': {
+                    borderColor: 'primary.light',
+                    boxShadow: (theme) => theme.palette.surface?.shadowHover || '0 4px 16px rgba(59,17,26,0.06)'
+                  }
                 }}
               >
                 {/* Top row: Stepper + Date */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1.5 }}>
                   <PipelineStepper currentStatus={req.status} />
-                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#7C726A', fontSize: '0.8rem' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.78rem' }}>
                     {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                     {' · '}
                     {new Date(req.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                   </Typography>
                 </Box>
 
-                {/* Details grid layout matching design */}
-                <Grid container spacing={2} sx={{ mb: 2.5 }}>
-                  <Grid xs={12} md={7}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                {/* Details grid layout */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 12, md: 7 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.75 }}>
                       <Typography
                         variant="h3"
                         sx={{
-                          fontSize: '1.25rem',
+                          fontSize: '1.2rem',
                           fontWeight: 800,
-                          color: '#241C1A',
+                          color: 'text.primary',
                           fontFamily: '"Plus Jakarta Sans", sans-serif'
                         }}
                       >
@@ -300,24 +310,24 @@ const StockRequests = () => {
                         label={movementLabel.toUpperCase()}
                         size="small"
                         sx={{
-                          height: 18,
-                          fontSize: '0.6rem',
+                          height: 20,
+                          fontSize: '0.62rem',
                           fontWeight: 800,
-                          borderRadius: '3px',
-                          bgcolor: isDelivery ? '#FFF3E0' : '#E2F6EA',
-                          color: isDelivery ? '#D97706' : '#16A34A',
+                          borderRadius: '4px',
+                          bgcolor: isDelivery ? (theme) => alpha(theme.palette.warning.main, 0.12) : (theme) => alpha(theme.palette.success.main, 0.12),
+                          color: isDelivery ? 'warning.dark' : 'success.main',
                         }}
                       />
                     </Box>
-                    <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 550 }}>
                       {req.beam_name} · {req.combination_name || 'Combination'}
                     </Typography>
                   </Grid>
 
                   {/* Quantity and Supplier columns */}
-                  <Grid xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
+                  <Grid size={{ xs: 6, md: 2.5 }} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
                     <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary', display: 'block', mb: 0.25 }}>
                         QTY
                       </Typography>
                       <Typography
@@ -325,17 +335,17 @@ const StockRequests = () => {
                         sx={{
                           fontFamily: '"Playfair Display", Georgia, serif',
                           fontWeight: 700,
-                          fontSize: '1.4rem',
-                          color: isDelivery ? '#D97706' : '#16A34A'
+                          fontSize: '1.35rem',
+                          color: isDelivery ? 'warning.main' : 'success.main'
                         }}
                       >
-                        {isDelivery ? '−' : '+'}{req.requested_qty}
+                        {isDelivery ? '−' : '+'}{req.requested_qty} pcs
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
+                  <Grid size={{ xs: 6, md: 2.5 }} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
                     <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary', display: 'block', mb: 0.25 }}>
                         SUPPLIER
                       </Typography>
                       <Typography
@@ -343,8 +353,8 @@ const StockRequests = () => {
                         sx={{
                           fontFamily: '"Playfair Display", Georgia, serif',
                           fontWeight: 700,
-                          fontSize: '1.35rem',
-                          color: '#241C1A'
+                          fontSize: '1.25rem',
+                          color: 'text.primary'
                         }}
                       >
                         {req.suppliers?.name || '—'}
@@ -354,7 +364,7 @@ const StockRequests = () => {
                 </Grid>
 
                 {/* Actions row */}
-                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', pt: 1.5, borderTop: '1px solid #FAF8F5' }}>
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
                   {req.status !== 'Received' && req.status !== 'Cancelled' && (
                     <>
                       {req.suppliers?.mobile && (
@@ -366,16 +376,10 @@ const StockRequests = () => {
                           onClick={() => openWhatsApp(req)}
                           sx={{
                             fontWeight: 800,
-                            borderRadius: '4px',
-                            borderColor: '#16A34A',
-                            color: '#16A34A',
+                            borderRadius: '6px',
                             px: 2,
-                            py: 0.8,
+                            py: 0.6,
                             fontSize: '0.78rem',
-                            '&:hover': {
-                              borderColor: '#15803d',
-                              bgcolor: 'rgba(22,163,74,0.04)'
-                            }
                           }}
                         >
                           WhatsApp
@@ -388,16 +392,10 @@ const StockRequests = () => {
                           onClick={() => handleStatusChange(req.id, 'Confirmed')}
                           sx={{
                             fontWeight: 800,
-                            borderRadius: '4px',
-                            borderColor: '#EAE6E1',
-                            color: '#241C1A',
+                            borderRadius: '6px',
                             px: 2,
-                            py: 0.8,
+                            py: 0.6,
                             fontSize: '0.78rem',
-                            '&:hover': {
-                              borderColor: '#9E8E7A',
-                              bgcolor: '#FCFCFA'
-                            }
                           }}
                         >
                           Confirm
@@ -411,15 +409,10 @@ const StockRequests = () => {
                           onClick={() => handleStatusChange(req.id, 'Received')}
                           sx={{
                             fontWeight: 800,
-                            borderRadius: '4px',
-                            bgcolor: '#3B111A',
-                            color: '#FFFFFF',
+                            borderRadius: '6px',
                             px: 2.5,
-                            py: 0.8,
+                            py: 0.6,
                             fontSize: '0.78rem',
-                            '&:hover': {
-                              bgcolor: '#2A0B12'
-                            }
                           }}
                         >
                           Mark Received
@@ -427,20 +420,19 @@ const StockRequests = () => {
                       )}
                     </>
                   )}
-                  <Tooltip title="Delete">
+                  <Tooltip title="Delete Request">
                     <IconButton
                       size="small"
                       color="error"
                       onClick={() => setDeleteId(req.id)}
                       sx={{
                         ml: 'auto',
-                        color: '#DC2626',
-                        border: '1px solid #FEEBEE',
-                        borderRadius: '4px',
-                        '&:hover': { bgcolor: '#FEEBEE' }
+                        borderRadius: '6px',
+                        border: '1px solid',
+                        borderColor: 'error.light',
                       }}
                     >
-                      <DeleteIcon sx={{ fontSize: 18 }} />
+                      <DeleteIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -451,8 +443,8 @@ const StockRequests = () => {
       )}
 
       {/* Receive confirmation dialog (spec §13) */}
-      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} slotProps={{ paper: { sx: { borderRadius: '8px', p: 1 } } }}>
-        <DialogTitle sx={{ fontWeight: 800, fontFamily: '"Plus Jakarta Sans", sans-serif', color: '#241C1A' }}>
+      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} slotProps={{ paper: { sx: { borderRadius: '10px', p: 1 } } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontFamily: '"Playfair Display", Georgia, serif' }}>
           Confirm Stock Receipt
         </DialogTitle>
         <DialogContent>
@@ -461,40 +453,42 @@ const StockRequests = () => {
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 600 }}>
                 {receiveConfirm.series_code} — {receiveConfirm.beam_name} · {receiveConfirm.combination_name}
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 2, bgcolor: '#FAF8F5', borderRadius: '4px', border: '1px solid #EAE6E1' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 2, bgcolor: 'action.hover', borderRadius: '8px', border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>Current Stock</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#241C1A' }}>{receiveConfirm.current_stock ?? '—'} pcs</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550 }}>Current Stock</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{receiveConfirm.current_stock ?? '—'} pcs</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>Receiving</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#16A34A' }}>+{receiveConfirm.requested_qty} pcs</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550 }}>Receiving</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'success.main' }}>+{receiveConfirm.requested_qty} pcs</Typography>
                 </Box>
-                <Box sx={{ borderTop: '1px solid #EAE6E1', pt: 1.5, display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#241C1A' }}>New Stock</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>{(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs</Typography>
+                <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1.5, display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>New Stock</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main' }}>{(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs</Typography>
                 </Box>
               </Box>
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setReceiveConfirm(null)} variant="outlined" sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700 }}>
+          <Button onClick={() => setReceiveConfirm(null)} variant="outlined" disabled={actionLoading}>
             Cancel
           </Button>
-          <Button onClick={confirmReceive} variant="contained" sx={{ borderRadius: '4px', bgcolor: '#3B111A', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#2A0B12' } }}>
-            Confirm & Update Stock
+          <Button onClick={confirmReceive} variant="contained" disabled={actionLoading}>
+            {actionLoading ? 'Updating…' : 'Confirm & Update Stock'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete confirm */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} slotProps={{ paper: { sx: { borderRadius: '8px' } } }}>
-        <DialogTitle sx={{ fontWeight: 800, color: '#241C1A' }}>Delete Request?</DialogTitle>
-        <DialogContent sx={{ color: '#7C726A' }}>This will permanently delete the stock request record.</DialogContent>
+      <Dialog open={!!deleteId} onClose={() => !actionLoading && setDeleteId(null)} slotProps={{ paper: { sx: { borderRadius: '10px' } } }}>
+        <DialogTitle sx={{ fontWeight: 800 }}>Delete Request?</DialogTitle>
+        <DialogContent sx={{ color: 'text.secondary' }}>This will permanently delete the stock request record.</DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setDeleteId(null)} variant="outlined" sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700 }}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDelete} sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700, bgcolor: '#DC2626' }}>Delete</Button>
+          <Button onClick={() => setDeleteId(null)} variant="outlined" disabled={actionLoading}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDelete} disabled={actionLoading}>
+            {actionLoading ? 'Deleting…' : 'Delete'}
+          </Button>
         </DialogActions>
       </Dialog>
 

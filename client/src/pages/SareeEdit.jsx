@@ -16,6 +16,7 @@ import {
   Collapse, LinearProgress, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Checkbox, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -327,10 +328,10 @@ const BeamSection = ({ beam: initialBeam, sareeId, sareeSeriesCode, onBeamUpdate
 
   return (
     <Accordion defaultExpanded sx={{ mb: 2, borderRadius: '12px !important', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'primary.light', overflow: 'hidden' }}>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: 'primary.main', color: '#fff', '& .MuiAccordionSummary-expandIconWrapper': { color: '#fff' } }}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', '& .MuiAccordionSummary-expandIconWrapper': { color: 'primary.contrastText' } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, mr: 1 }}>
-          <Chip label={`${combinations.length} combos`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff' }} />
-          <Chip label={`${totalStock} pcs total`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff' }} />
+          <Chip label={`${combinations.length} combos`} size="small" sx={{ bgcolor: (theme) => alpha(theme.palette.primary.contrastText, 0.2), color: 'primary.contrastText' }} />
+          <Chip label={`${totalStock} pcs total`} size="small" sx={{ bgcolor: (theme) => alpha(theme.palette.primary.contrastText, 0.2), color: 'primary.contrastText' }} />
           <Typography sx={{ fontWeight: 700, flex: 1 }}>{beamName || 'Unnamed Beam'}</Typography>
         </Box>
       </AccordionSummary>

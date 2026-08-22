@@ -22,7 +22,7 @@ export const TableSkeleton = ({ rows = 6, cols = 5 }) => {
           gap: 2,
           px: 2,
           py: 1.5,
-          bgcolor: isLight ? '#F8F5F3' : '#1E1B19',
+          bgcolor: theme.palette.background.default,
           borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >

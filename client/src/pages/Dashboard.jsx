@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useDebouncedCallback } from '../hooks/useDebounce';
+import { alpha } from '@mui/material/styles';
 import {
   Grid, Paper, Box, Typography,
   Table, TableBody, TableCell, TableContainer, TableRow, TableHead,
@@ -338,7 +339,7 @@ const Dashboard = () => {
               <StatCard
                 label="Current Stock" sublabel="Total physical units"
                 value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
-                icon={<GridIcon />} tint='#7C3AED'
+                icon={<GridIcon />} tint={theme.palette.primary.light}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -364,36 +365,36 @@ const Dashboard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, flexWrap: 'wrap' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/low-stock')}>
-                  <Box sx={{ bgcolor: 'rgba(245,158,11,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><WarningIcon color="warning" sx={{ fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'warning.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><WarningIcon color="warning" sx={{ fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Low Stock <Box component="span" sx={{ color: 'warning.main', fontWeight: 800 }}>{stats.lowStock}</Box></Typography>
                 </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/sarees?status=out')}>
-                  <Box sx={{ bgcolor: 'rgba(239,68,68,0.1)', p: 0.6, borderRadius: '5px', display: 'flex' }}><ErrorIcon color="error" sx={{ fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'error.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><ErrorIcon color="error" sx={{ fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Out of Stock <Box component="span" sx={{ color: 'error.main', fontWeight: 800 }}>{stats.outOfStock}</Box></Typography>
                 </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-requests')}>
-                  <Box sx={{ bgcolor: 'rgba(56,189,248,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><PendingIcon color="info" sx={{ fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'info.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><PendingIcon color="info" sx={{ fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Pending <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.pendingRequests}</Box></Typography>
                 </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-history?action=Rollback')}>
-                  <Box sx={{ bgcolor: 'rgba(168,85,247,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><SwapVertIcon sx={{ color: '#A855F7', fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'info.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><SwapVertIcon sx={{ color: 'info.main', fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                    Today's Rollbacks <Box component="span" sx={{ color: '#A855F7', fontWeight: 800 }}>{stats.todayRollbacks || 0}</Box>
+                    Today's Rollbacks <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.todayRollbacks || 0}</Box>
                     <Box component="span" sx={{ color: 'text.secondary', ml: 0.75, fontSize: '0.72rem' }}>(Total: {stats.totalRollbacks || 0})</Box>
                   </Typography>
                 </Box>
               </Box>
               <Button variant="contained" size="small" onClick={() => navigate('/stock-requests')}
-                sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', bgcolor: '#3B111A', '&:hover': { bgcolor: '#2A0B12' } }}>
+                sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}>
                 Create Purchase Order
               </Button>
             </Box>
             {stats.lastRollback && (
               <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#A855F7', letterSpacing: '0.04em' }}>LAST ROLLBACK:</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'info.main', letterSpacing: '0.04em' }}>LAST ROLLBACK:</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                   {stats.lastRollback.series_code} · {stats.lastRollback.combination_name} by <b>{stats.lastRollback.user_name}</b> ({new Date(stats.lastRollback.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}) — <i>"{stats.lastRollback.reason}"</i>
                 </Typography>
@@ -430,8 +431,8 @@ const Dashboard = () => {
                       <YAxis stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
                       <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: isLight ? 'rgba(59,17,26,0.03)' : 'rgba(255,255,255,0.03)' }} />
                       <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} />
-                      <Bar dataKey="stockAdded" name="Stock In" fill="#16A34A" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                      <Bar dataKey="stockDelivered" name="Delivered Out" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                      <Bar dataKey="stockAdded" name="Stock In" fill={theme.palette.success.main} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                      <Bar dataKey="stockDelivered" name="Delivered Out" fill={theme.palette.error.main} radius={[4, 4, 0, 0]} maxBarSize={32} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -481,16 +482,16 @@ const Dashboard = () => {
           {/* AI DEMAND PREDICTION BANNER — dark maroon matching image */}
           {selectedSaree && (
             <Box sx={{
-              bgcolor: '#3B111A', borderRadius: '8px', px: 3, py: 2, mb: 2.5,
+              bgcolor: 'primary.main', borderRadius: '8px', px: 3, py: 2, mb: 2.5,
               display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
-              '&:hover': { bgcolor: '#2A0B12' }, transition: 'background 0.2s'
+              '&:hover': { bgcolor: 'primary.dark' }, transition: 'background 0.2s'
             }} onClick={() => setActiveTab(1)}>
-              <SparklesIcon sx={{ color: '#F0C98A', fontSize: 20 }} />
-              <Typography sx={{ color: '#F0C98A', fontWeight: 700, fontSize: '0.9rem' }}>
+              <SparklesIcon sx={{ color: 'brand.gold', fontSize: 20 }} />
+              <Typography sx={{ color: 'brand.gold', fontWeight: 700, fontSize: '0.9rem' }}>
                 AI Demand Prediction{selectedSaree?.series_code ? `: ${selectedSaree.series_code} — ${selectedSaree.sari_name || ''}` : ''}
               </Typography>
               <Box sx={{ ml: 'auto' }}>
-                <ArrowForwardIcon sx={{ color: 'rgba(240,201,138,0.7)', fontSize: 18 }} />
+                <ArrowForwardIcon sx={{ color: 'brand.gold', opacity: 0.7, fontSize: 18 }} />
               </Box>
             </Box>
           )}
@@ -566,7 +567,7 @@ const Dashboard = () => {
                         ) : (
                           <Box sx={{
                             width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                            bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08), display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '1.2rem'
                           }}>🧵</Box>
                         )}
@@ -635,7 +636,7 @@ const Dashboard = () => {
                         ) : (
                           <Box sx={{
                             width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                            bgcolor: 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: (theme) => alpha(theme.palette.success.main, 0.08), display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '1.2rem'
                           }}>🧵</Box>
                         )}

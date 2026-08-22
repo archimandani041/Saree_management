@@ -169,9 +169,9 @@ const SareeDetail = () => {
   );
 
   const getStockStatus = (total, min) => {
-    if (total === 0) return { label: 'OUT OF STOCK', color: 'error', bg: 'rgba(239, 68, 68, 0.08)' };
-    if (total <= min) return { label: 'LOW STOCK', color: 'warning', bg: 'rgba(245, 158, 11, 0.08)' };
-    return { label: 'HEALTHY', color: 'success', bg: 'rgba(16, 185, 129, 0.08)' };
+    if (total === 0) return { label: 'OUT OF STOCK', color: 'error', bg: 'error.light' };
+    if (total <= min) return { label: 'LOW STOCK', color: 'warning', bg: 'warning.light' };
+    return { label: 'HEALTHY', color: 'success', bg: 'success.light' };
   };
   const statusInfo = getStockStatus(totalStock, minStock);
 
@@ -379,8 +379,8 @@ const SareeDetail = () => {
 
 
       {/* Series Management Dialog */}
-      <Dialog open={seriesDialogOpen} onClose={() => setSeriesDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>Series Options</DialogTitle>
+      <Dialog open={seriesDialogOpen} onClose={() => setSeriesDialogOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: '10px', p: 1 } } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1, fontFamily: '"Playfair Display", Georgia, serif' }}>Series Options</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body1" sx={{ fontWeight: 700 }}>Current Series:</Typography>
@@ -398,7 +398,7 @@ const SareeDetail = () => {
                 color="primary" 
                 onClick={handleUndoSeries}
                 disabled={!saree?.series_letter || saree.series_letter === 'A'}
-                sx={{ height: 48, fontWeight: 700 }}
+                sx={{ height: 44, fontWeight: 700, borderRadius: '8px' }}
               >
                 Undo Series
               </Button>
@@ -408,7 +408,7 @@ const SareeDetail = () => {
                 color="primary" 
                 onClick={() => setSeriesConfirmOpen(true)}
                 disabled={saree?.series_letter === 'Z'}
-                sx={{ height: 48, fontWeight: 700 }}
+                sx={{ height: 44, fontWeight: 700, borderRadius: '8px' }}
               >
                 Next Series
               </Button>
@@ -420,36 +420,37 @@ const SareeDetail = () => {
               <TextField
                 label="Series Letter"
                 fullWidth
+                size="small"
                 value={manualSeriesLetter}
                 onChange={(e) => setManualSeriesLetter(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1))}
                 placeholder="A-Z"
-                inputProps={{ maxLength: 1, style: { textAlign: 'center', fontWeight: 'bold' } }}
+                slotProps={{ htmlInput: { maxLength: 1, style: { textAlign: 'center', fontWeight: 'bold' } } }}
               />
               <Button 
                 variant="contained" 
                 color="secondary" 
                 onClick={() => handleSetSeries(manualSeriesLetter)}
                 disabled={!manualSeriesLetter || manualSeriesLetter === saree?.series_letter}
-                sx={{ px: 4 }}
+                sx={{ px: 3, borderRadius: '8px', fontWeight: 700 }}
               >
                 Apply
               </Button>
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ pt: 2 }}>
-          <Button onClick={() => setSeriesDialogOpen(false)} color="inherit">Close</Button>
+        <DialogActions sx={{ pt: 2, px: 3 }}>
+          <Button onClick={() => setSeriesDialogOpen(false)} variant="outlined">Close</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Legacy Next Series Confirmation (Triggered from new dialog) */}
-      <Dialog open={seriesConfirmOpen} onClose={() => setSeriesConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ fontWeight: 700 }}>Confirm Next Series</DialogTitle>
+      {/* Next Series Confirmation */}
+      <Dialog open={seriesConfirmOpen} onClose={() => setSeriesConfirmOpen(false)} slotProps={{ paper: { sx: { borderRadius: '10px', p: 1 } } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontFamily: '"Playfair Display", Georgia, serif' }}>Confirm Next Series</DialogTitle>
         <DialogContent>
           <DialogContentText>Are you sure you want to advance this saree series? This increments the letter (e.g. A → B).</DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setSeriesConfirmOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => setSeriesConfirmOpen(false)} variant="outlined">Cancel</Button>
           <Button onClick={handleNextSeriesConfirm} variant="contained" color="primary">Advance Series</Button>
         </DialogActions>
       </Dialog>
@@ -473,7 +474,7 @@ const SareeDetail = () => {
           setSnackbarOpen(false);
           navigate('/sarees');
         }}
-        PaperProps={{ sx: { p: 1, borderRadius: 2 } }}
+        slotProps={{ paper: { sx: { p: 1, borderRadius: '8px' } } }}
       >
         <DialogContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
           <Typography sx={{ fontWeight: 700 }}>{snackbarMessage}</Typography>

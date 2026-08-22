@@ -26,27 +26,27 @@ const LowStock = () => {
   const [selectedSareeId, setSelectedSareeId] = useState('');
 
 
-  const fetchLowStockSarees = async () => {
-    setLoading(true);
+  const fetchLowStockSarees = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await sareeAPI.getAll({ status: 'low', limit: 100 });
       setSarees(data.sarees || []);
     } catch (error) {
       console.error('Failed to load low stock sarees:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => { fetchLowStockSarees(); }, []);
 
-  // Real-time subscriptions
+  // Real-time subscriptions (silent refresh to preserve scroll & avoid flash)
   useEffect(() => {
     if (!supabase) return;
     const channel = supabase
       .channel('realtime-low-stock')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => fetchLowStockSarees())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => fetchLowStockSarees())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => fetchLowStockSarees(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => fetchLowStockSarees(true))
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, []);
@@ -117,6 +117,28 @@ const LowStock = () => {
         />
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Summary Metric Header */}
+          <Paper sx={{ p: 2, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main', animation: 'pulse 1.5s infinite' }} />
+              <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'text.primary' }}>
+                Inventory Shortage Alert
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Chip
+                label={`${lowItems.filter(i => i.stock === 0).length} Out of Stock`}
+                size="small"
+                sx={{ bgcolor: 'error.main', color: 'common.white', fontWeight: 800, fontSize: '0.72rem' }}
+              />
+              <Chip
+                label={`${lowItems.filter(i => i.stock > 0).length} Low Stock`}
+                size="small"
+                sx={{ bgcolor: 'warning.main', color: 'common.white', fontWeight: 800, fontSize: '0.72rem' }}
+              />
+            </Box>
+          </Paper>
+
           {lowItems.map((item, idx) => {
             const health = getStockHealth(item.stock, item.min);
             const isCritical = item.stock === 0;
@@ -130,10 +152,13 @@ const LowStock = () => {
                   bgcolor: 'background.paper',
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderLeft: `3px solid ${health.color}`,
+                  borderLeft: `4px solid ${health.color}`,
                   borderRadius: '10px',
-                  transition: 'box-shadow 0.18s ease',
-                  '&:hover': { boxShadow: '0 4px 20px rgba(59,17,26,0.07)' },
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: 'primary.light',
+                    boxShadow: 'surface.shadowHover'
+                  },
                 }}
               >
                 {/* Top: severity badge */}
@@ -144,16 +169,16 @@ const LowStock = () => {
                         {item.saree.series_code}
                       </Typography>
                       <Chip
-                        label={isCritical ? 'CRITICAL' : 'LOW'}
+                        label={isCritical ? 'CRITICAL (OUT OF STOCK)' : 'LOW STOCK'}
                         size="small"
                         sx={{
                           height: 20, fontSize: '0.62rem', fontWeight: 800,
-                          bgcolor: isCritical ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                          bgcolor: isCritical ? 'error.light' : 'warning.light',
                           color: isCritical ? 'error.main' : 'warning.dark'
                         }}
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550 }}>
                       {item.beam ? `${item.beam.beam_name} · ` : ''}{item.combo?.combination_name || item.saree.sari_name || 'Unnamed'}
                     </Typography>
 
@@ -167,12 +192,13 @@ const LowStock = () => {
                             size="small"
                             sx={{
                               height: 22,
-                              fontSize: '0.7rem',
+                              fontSize: '0.68rem',
                               fontWeight: 700,
-                              bgcolor: 'rgba(59, 130, 246, 0.08)',
-                              color: '#1E40AF',
-                              border: '1px solid rgba(59, 130, 246, 0.2)',
-                              borderRadius: '6px'
+                              bgcolor: 'action.hover',
+                              color: 'text.primary',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: '4px'
                             }}
                           />
                         ))}
@@ -182,20 +208,20 @@ const LowStock = () => {
                 </Box>
 
                 {/* Stock info */}
-                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: { xs: 2, sm: 4 }, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 800, color: health.color }}>{item.stock} pcs</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Minimum</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Minimum</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>{item.min} pcs</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shortage</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shortage</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 800, color: 'error.main' }}>−{item.shortage} pcs</Typography>
                   </Box>
-                  <Box sx={{ flex: 1, minWidth: 120 }}>
+                  <Box sx={{ flex: 1, minWidth: 140 }}>
                     <LinearProgress
                       variant="determinate"
                       value={Math.min(pct, 100)}
@@ -212,20 +238,21 @@ const LowStock = () => {
                   <Button
                     variant="contained"
                     size="small"
-                    startIcon={<WhatsAppIcon />}
+                    color="success"
+                    startIcon={<WhatsAppIcon sx={{ fontSize: '15px !important' }} />}
                     onClick={() => openRequest(item)}
-                    sx={{ fontWeight: 700, borderRadius: '6px', textTransform: 'none', bgcolor: '#16A34A', '&:hover': { bgcolor: '#15803D' } }}
+                    sx={{ fontWeight: 800, borderRadius: '6px', fontSize: '0.78rem' }}
                   >
                     Request Stock
                   </Button>
                   <Button
                     variant="outlined"
                     size="small"
-                    startIcon={<ViewIcon />}
+                    startIcon={<ViewIcon sx={{ fontSize: '15px !important' }} />}
                     onClick={() => navigate(`/sarees/${item.saree.id}`)}
-                    sx={{ fontWeight: 600, borderRadius: '6px', textTransform: 'none' }}
+                    sx={{ fontWeight: 700, borderRadius: '6px', fontSize: '0.78rem' }}
                   >
-                    View
+                    View Product
                   </Button>
                 </Box>
               </Box>

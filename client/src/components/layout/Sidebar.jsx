@@ -65,8 +65,8 @@ const Sidebar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isLight = themeMode === 'light';
 
-  const mutedText  = isLight ? '#9E8E7A' : '#8A7C6A';
-  const idleText   = isLight ? '#2E2824' : '#D8CABA';
+  const mutedText  = 'text.secondary';
+  const idleText   = isLight ? 'text.primary' : 'text.disabled';
   const activeBg   = isLight ? 'rgba(59,17,26,0.07)' : 'rgba(59,17,26,0.18)';
 
   const handleLogout = async () => {
@@ -104,12 +104,12 @@ const Sidebar = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           <Box sx={{
             width: 36, height: 36, borderRadius: '10px',
-            background: 'linear-gradient(135deg, #72383D 0%, #3B111A 100%)',
+            background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 3px 10px rgba(59,17,26,0.30)',
             flexShrink: 0,
           }}>
-            <StorefrontIcon sx={{ color: '#fff', fontSize: '1.1rem' }} />
+            <StorefrontIcon sx={{ color: 'common.white', fontSize: '1.1rem' }} />
           </Box>
           <Box>
             <Typography sx={{
@@ -129,6 +129,7 @@ const Sidebar = () => {
         </Box>
         {isMobile && (
           <IconButton
+            aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
             size="small"
             sx={{ color: 'text.secondary' }}
@@ -154,7 +155,7 @@ const Sidebar = () => {
           }}
           sx={{
             bgcolor: 'primary.main',
-            color: '#FFFFFF',
+            color: 'common.white',
             borderRadius: '8px',
             py: 1.1,
             fontSize: '0.78rem',
@@ -278,6 +279,7 @@ const Sidebar = () => {
           </Typography>
           <Tooltip title={`Switch to ${isLight ? 'dark' : 'light'} mode`}>
             <IconButton
+              aria-label="Toggle theme"
               onClick={toggleTheme}
               size="small"
               sx={{
@@ -332,6 +334,7 @@ const Sidebar = () => {
           </Box>
           <Tooltip title="Logout">
             <IconButton
+              aria-label="Sign out"
               onClick={handleLogout}
               size="small"
               sx={{ color: mutedText, '&:hover': { color: 'error.main', bgcolor: 'transparent' } }}

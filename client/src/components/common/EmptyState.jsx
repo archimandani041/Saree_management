@@ -39,7 +39,7 @@ const VARIANTS = {
     title: 'All stock levels are healthy',
     description: 'No items are currently below their minimum stock thresholds. Great work!',
     cta: null,
-    accentColor: '#16A34A',
+    accentColor: 'success.main',
   },
   'no-inventory': {
     icon: InventoryIcon,
@@ -121,6 +121,7 @@ const EmptyState = ({
         }}
       >
         <DisplayIcon
+          aria-hidden="true"
           sx={{
             fontSize: compact ? '1.75rem' : '2.25rem',
             color: iconColor,
@@ -164,7 +165,7 @@ const EmptyState = ({
           size={compact ? 'small' : 'medium'}
           sx={{
             bgcolor: 'primary.main',
-            color: '#fff',
+            color: 'common.white',
             fontWeight: 700,
             '&:hover': { filter: 'brightness(1.1)', transform: 'translateY(-1px)' },
           }}

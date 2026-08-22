@@ -20,6 +20,7 @@ import {
   IconButton,
   CircularProgress
 } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
 import { Visibility, VisibilityOff, Email, Lock, Check } from '@mui/icons-material';
 
 const SLIDES = [
@@ -43,6 +44,7 @@ const SLIDES = [
 const Login = () => {
   const { login, signUp } = useAuth();
   const { setThemeMode } = useApp();
+  const theme = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
@@ -178,28 +180,28 @@ const Login = () => {
       {/* Custom Styles for light mode inputs and fade animation */}
       <style>{`
         .custom-input .MuiOutlinedInput-root {
-          background-color: #FFFFFF !important;
+          background-color: ${theme.palette.background.paper} !important;
           border-radius: 12px !important;
-          border: 1px solid #ECE7E4 !important;
+          border: 1px solid ${theme.palette.divider} !important;
           transition: all 0.25s ease-in-out !important;
         }
         .custom-input .MuiOutlinedInput-root:hover {
-          border-color: #AC9C8D !important;
+          border-color: ${theme.palette.text.secondary} !important;
         }
         .custom-input .MuiOutlinedInput-root.Mui-focused {
-          border-color: #72383D !important;
-          box-shadow: 0 0 0 3px rgba(114, 56, 61, 0.12) !important;
+          border-color: ${theme.palette.primary.light} !important;
+          box-shadow: 0 0 0 3px ${alpha(theme.palette.primary.light, 0.12)} !important;
         }
         .custom-input .MuiOutlinedInput-notchedOutline {
           border: none !important;
         }
         .custom-input input {
-          color: #2D2825 !important;
+          color: ${theme.palette.text.primary} !important;
           font-size: 0.92rem !important;
           padding: 12.5px 14px !important;
         }
         .custom-input input::placeholder {
-          color: #9A8A7A !important;
+          color: ${theme.palette.text.secondary} !important;
           opacity: 1 !important;
         }
         @keyframes slideFadeIn {
@@ -215,13 +217,14 @@ const Login = () => {
         height: { xs: 'auto', md: 560 },
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
-        bgcolor: 'rgba(255, 255, 255, 0.85)',
+        bgcolor: (theme) => alpha(theme.palette.background.paper, 0.85),
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         borderRadius: 6,
         overflow: 'hidden',
-        boxShadow: '0 24px 64px -12px rgba(45, 40, 37, 0.06), 0 1px 2px rgba(0,0,0,0.01)',
-        border: '1px solid rgba(226, 232, 240, 0.8)'
+        boxShadow: (theme) => theme.palette.surface?.shadow || '0 24px 64px -12px rgba(45, 40, 37, 0.06), 0 1px 2px rgba(0,0,0,0.01)',
+        border: '1px solid',
+        borderColor: (theme) => alpha(theme.palette.divider, 0.8)
       }}>
 
         {/* LEFT PANEL: Cover image & Slider */}
@@ -233,7 +236,7 @@ const Login = () => {
           p: 4.5,
           position: 'relative',
           overflow: 'hidden',
-          backgroundImage: `linear-gradient(180deg, rgba(50, 45, 41, 0.2) 0%, rgba(114, 56, 61, 0.75) 100%), url('${SLIDES[activeSlide].image}')`,
+          backgroundImage: (theme) => `linear-gradient(180deg, ${alpha(theme.palette.text.primary, 0.2)} 0%, ${alpha(theme.palette.primary.light, 0.75)} 100%), url('${SLIDES[activeSlide].image}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           borderRadius: 4,
@@ -244,12 +247,12 @@ const Login = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', zIndex: 2 }}>
             <Typography variant="h5" sx={{
               fontWeight: 900,
-              color: '#FFF',
+              color: 'common.white',
               letterSpacing: '0.04em',
               fontFamily: '"Playfair Display", Georgia, serif',
               fontSize: '1.45rem'
             }}>
-              KP<Box component="span" sx={{ color: '#EFE9E1' }}> Creation</Box>
+              KP<Box component="span" sx={{ color: 'divider' }}> Creation</Box>
             </Typography>
           </Box>
 
@@ -270,7 +273,7 @@ const Login = () => {
                 >
                   <Typography variant="h3" sx={{
                     fontFamily: '"Playfair Display", Georgia, serif',
-                    color: '#FFF',
+                    color: 'common.white',
                     fontWeight: 800,
                     fontSize: '1.65rem',
                     mb: 1.2,
@@ -280,7 +283,7 @@ const Login = () => {
                     {slide.title}
                   </Typography>
                   <Typography variant="body2" sx={{
-                    color: '#EFE9E1',
+                    color: 'divider',
                     fontSize: '0.85rem',
                     lineHeight: 1.5,
                     fontWeight: 400
@@ -301,7 +304,7 @@ const Login = () => {
                     width: activeSlide === idx ? 28 : 8,
                     height: 8,
                     borderRadius: 4,
-                    bgcolor: activeSlide === idx ? '#FFF' : 'rgba(255, 255, 255, 0.3)',
+                    bgcolor: activeSlide === idx ? 'common.white' : (theme) => alpha(theme.palette.common.white, 0.3),
                     cursor: 'pointer',
                     transition: 'all 0.3s ease-in-out'
                   }}
@@ -317,14 +320,14 @@ const Login = () => {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          p: { xs: 4, md: 6 },
+          p: { xs: 2.5, sm: 4, md: 6 },
           overflowY: 'auto'
         }}>
           {/* Header */}
           <Box sx={{ mb: 3.5 }}>
             <Typography variant="h2" sx={{
               fontFamily: '"Playfair Display", Georgia, serif',
-              color: '#322D29',
+              color: 'text.primary',
               fontWeight: 800,
               fontSize: '1.85rem',
               mb: 1,
@@ -334,7 +337,7 @@ const Login = () => {
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="body2" sx={{ color: '#AC9C8D', fontSize: '0.85rem' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               </Typography>
               <Typography
@@ -345,12 +348,12 @@ const Login = () => {
                   setSuccess('');
                 }}
                 sx={{
-                  color: '#72383D',
+                  color: 'primary.light',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  '&:hover': { color: '#592B2F' }
+                  '&:hover': { color: 'primary.main' }
                 }}
               >
                 {isSignUp ? 'Log in' : 'Sign up'}
@@ -360,17 +363,17 @@ const Login = () => {
 
           {/* Feedback Messages */}
           {sessionReset && (
-            <Alert severity="warning" sx={{ mb: 2.5, bgcolor: 'rgba(114, 56, 61, 0.06)', color: '#72383D', border: '1px solid rgba(114, 56, 61, 0.15)', borderRadius: 2 }}>
+            <Alert severity="warning" sx={{ mb: 2.5, bgcolor: (theme) => alpha(theme.palette.warning.main, 0.06), color: 'warning.dark', border: '1px solid', borderColor: (theme) => alpha(theme.palette.warning.main, 0.15), borderRadius: 2 }}>
               Database was reset — please log in again with email.
             </Alert>
           )}
           {error && (
-            <Alert severity="error" sx={{ mb: 2.5, bgcolor: 'rgba(114, 56, 61, 0.08)', color: '#72383D', border: '1px solid rgba(114, 56, 61, 0.2)', borderRadius: 2 }}>
+            <Alert severity="error" sx={{ mb: 2.5, bgcolor: (theme) => alpha(theme.palette.error.main, 0.08), color: 'error.dark', border: '1px solid', borderColor: (theme) => alpha(theme.palette.error.main, 0.2), borderRadius: 2 }}>
               {error}
             </Alert>
           )}
           {success && (
-            <Alert severity="success" icon={<Check sx={{ color: '#22C55E' }} />} sx={{ mb: 2.5, bgcolor: 'rgba(34, 197, 94, 0.08)', color: '#16A34A', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: 2 }}>
+            <Alert severity="success" icon={<Check sx={{ color: 'success.main' }} />} sx={{ mb: 2.5, bgcolor: (theme) => alpha(theme.palette.success.main, 0.08), color: 'success.dark', border: '1px solid', borderColor: (theme) => alpha(theme.palette.success.main, 0.2), borderRadius: 2 }}>
               {success}
             </Alert>
           )}
@@ -418,7 +421,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Email sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
+                      <Email sx={{ color: 'text.secondary', fontSize: 18, mr: 0.5 }} />
                     </InputAdornment>
                   ),
                 },
@@ -439,7 +442,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
+                      <Lock sx={{ color: 'text.secondary', fontSize: 18, mr: 0.5 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -447,7 +450,7 @@ const Login = () => {
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        sx={{ color: '#AC9C8D' }}
+                        sx={{ color: 'text.secondary' }}
                       >
                         {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
                       </IconButton>
@@ -466,12 +469,12 @@ const Login = () => {
                   setSuccess('');
                 }}
                 sx={{
-                  color: '#AC9C8D',
+                  color: 'text.secondary',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
                   textAlign: 'right',
                   mt: -0.5,
-                  '&:hover': { color: '#72383D', textDecoration: 'underline' }
+                  '&:hover': { color: 'primary.light', textDecoration: 'underline' }
                 }}
               >
                 Forgot password?
@@ -486,15 +489,15 @@ const Login = () => {
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
                     sx={{
-                      color: '#D1C7BD',
-                      '&.Mui-checked': { color: '#72383D' }
+                      color: 'text.disabled',
+                      '&.Mui-checked': { color: 'primary.light' }
                     }}
                   />
                 }
                 label={
-                  <Typography variant="body2" sx={{ color: '#AC9C8D', fontSize: '0.78rem' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>
                     I agree to the{' '}
-                    <span style={{ color: '#72383D', fontWeight: 600, cursor: 'pointer' }}>Terms & Conditions</span>
+                    <span style={{ color: theme.palette.primary.light, fontWeight: 600, cursor: 'pointer' }}>Terms & Conditions</span>
                   </Typography>
                 }
                 sx={{ ml: -0.5, mt: -0.5 }}
@@ -509,26 +512,26 @@ const Login = () => {
               fullWidth
               disabled={loading}
               sx={{
-                bgcolor: '#72383D',
-                color: '#FFF',
+                bgcolor: 'primary.light',
+                color: 'common.white',
                 borderRadius: '30px',
                 py: 1.5,
                 fontSize: '0.92rem',
                 fontWeight: 700,
                 textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(114, 56, 61, 0.15)',
+                boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.light, 0.15)}`,
                 mt: 1,
                 '&:hover': {
-                  bgcolor: '#592B2F',
-                  boxShadow: '0 6px 20px rgba(114, 56, 61, 0.25)',
+                  bgcolor: 'primary.main',
+                  boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.light, 0.25)}`,
                   transform: 'translateY(-1px)'
                 },
                 '&:active': {
                   transform: 'translateY(1px)'
                 },
                 '&.Mui-disabled': {
-                  bgcolor: 'rgba(114, 56, 61, 0.4)',
-                  color: 'rgba(255, 255, 255, 0.5)'
+                  bgcolor: (theme) => alpha(theme.palette.primary.light, 0.4),
+                  color: (theme) => alpha(theme.palette.common.white, 0.5)
                 },
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
@@ -540,7 +543,7 @@ const Login = () => {
             {isForgotPassword && (
               <Typography
                 onClick={() => { setIsForgotPassword(false); setError(''); setSuccess(''); }}
-                sx={{ color: '#AC9C8D', fontSize: '0.82rem', textAlign: 'center', cursor: 'pointer', '&:hover': { color: '#72383D' } }}
+                sx={{ color: 'text.secondary', fontSize: '0.82rem', textAlign: 'center', cursor: 'pointer', '&:hover': { color: 'primary.light' } }}
               >
                 ← Back to login
               </Typography>

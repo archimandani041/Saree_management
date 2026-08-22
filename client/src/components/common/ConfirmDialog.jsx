@@ -27,27 +27,27 @@ const ConfirmDialog = ({
   const variantConfig = {
     delete: {
       icon: DeleteIcon,
-      iconColor: '#DC2626',
-      iconBg: 'rgba(220,38,38,0.10)',
+      iconColor: 'error.main',
+      iconBg: 'error.light',
       confirmColor: 'error',
-      confirmBg: '#DC2626',
-      confirmHover: '#B91C1C',
+      confirmBg: 'error.main',
+      confirmHover: 'error.dark',
     },
     warning: {
       icon: WarningIcon,
-      iconColor: '#D97706',
-      iconBg: 'rgba(217,119,6,0.10)',
+      iconColor: 'warning.main',
+      iconBg: 'warning.light',
       confirmColor: 'warning',
-      confirmBg: '#D97706',
-      confirmHover: '#B45309',
+      confirmBg: 'warning.main',
+      confirmHover: 'warning.dark',
     },
     info: {
       icon: WarningIcon,
-      iconColor: '#2563EB',
-      iconBg: 'rgba(37,99,235,0.10)',
+      iconColor: 'info.main',
+      iconBg: 'info.light',
       confirmColor: 'primary',
-      confirmBg: '#3B111A',
-      confirmHover: '#2A0B12',
+      confirmBg: 'primary.main',
+      confirmHover: 'primary.dark',
     },
   };
 
@@ -60,11 +60,15 @@ const ConfirmDialog = ({
       onClose={loading ? undefined : onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          p: 0.5,
-        },
+      aria-labelledby="dialog-title"
+      aria-describedby="dialog-description"
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 3,
+            p: 0.5,
+          },
+        }
       }}
     >
       <DialogTitle sx={{ pb: 1, pt: 2.5 }}>
@@ -145,7 +149,7 @@ const ConfirmDialog = ({
           disabled={loading}
           sx={{
             bgcolor: config.confirmBg,
-            color: '#fff',
+            color: 'common.white',
             fontWeight: 700,
             '&:hover': { bgcolor: config.confirmHover },
           }}

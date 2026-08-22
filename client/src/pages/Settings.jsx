@@ -8,6 +8,7 @@ import {
   Box, Paper, TextField, Button, Typography, Grid, Alert,
   FormControl, InputLabel, Select, MenuItem, Skeleton, Divider
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Save, SettingsOutlined, BusinessOutlined, PaletteOutlined, Inventory2Outlined } from '@mui/icons-material';
 import PageHeader from '../components/common/PageHeader';
 
@@ -26,11 +27,11 @@ const SectionCard = ({ icon, title, description, children }) => (
       display: 'flex', alignItems: 'center', gap: 1.5,
       borderBottom: '1px solid',
       borderColor: 'divider',
-      bgcolor: (theme) => theme.palette.mode === 'light' ? '#FAFAF9' : 'rgba(255,255,255,0.02)',
+      bgcolor: (theme) => theme.palette.mode === 'light' ? theme.palette.background.default : 'rgba(255,255,255,0.02)',
     }}>
       <Box sx={{
         color: 'primary.main',
-        bgcolor: 'rgba(59,17,26,0.08)',
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
         p: '6px',
         borderRadius: '7px',
         display: 'flex',

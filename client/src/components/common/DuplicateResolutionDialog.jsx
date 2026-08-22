@@ -48,11 +48,11 @@ import ImageIcon from '@mui/icons-material/Image';
 
 // ── Status color / icon config ─────────────────────────────────
 const STATUS_CONFIG = {
-  SAREE:         { color: '#DC2626', icon: <ErrorRoundedIcon />,         label: 'Saree Already Exists',      bg: '#FEF2F2' },
-  BEAM:          { color: '#D97706', icon: <WarningAmberRoundedIcon />,  label: 'Beam Already Exists',       bg: '#FFFBEB' },
-  DUPLICATE:     { color: '#DC2626', icon: <ErrorRoundedIcon />,         label: 'Exact Duplicate',           bg: '#FEF2F2' },
-  SIMILAR:       { color: '#D97706', icon: <WarningAmberRoundedIcon />,  label: 'Similar Combination',       bg: '#FFFBEB' },
-  IMAGE_CONFLICT:{ color: '#2563EB', icon: <InfoRoundedIcon />,          label: 'Image Conflict',            bg: '#EFF6FF' },
+  SAREE:         { color: 'error.main', icon: <ErrorRoundedIcon />,         label: 'Saree Already Exists',      bg: 'error.light' },
+  BEAM:          { color: 'warning.main', icon: <WarningAmberRoundedIcon />,  label: 'Beam Already Exists',       bg: 'warning.light' },
+  DUPLICATE:     { color: 'error.main', icon: <ErrorRoundedIcon />,         label: 'Exact Duplicate',           bg: 'error.light' },
+  SIMILAR:       { color: 'warning.main', icon: <WarningAmberRoundedIcon />,  label: 'Similar Combination',       bg: 'warning.light' },
+  IMAGE_CONFLICT:{ color: 'info.main', icon: <InfoRoundedIcon />,          label: 'Image Conflict',            bg: 'info.light' },
 };
 
 // ── Diff row helpers ───────────────────────────────────────────
@@ -77,10 +77,10 @@ const DiffTable = ({ diff }) => {
   });
 
   const rowStyle = {
-    unchanged: { bg: 'transparent', label: null, labelColor: '#6B7280' },
-    changed:   { bg: '#FFFBEB',     label: 'Changed',  labelColor: '#92400E' },
-    added:     { bg: '#F0FDF4',     label: 'Added',    labelColor: '#14532D' },
-    removed:   { bg: '#FEF2F2',     label: 'Removed',  labelColor: '#7F1D1D' },
+    unchanged: { bg: 'transparent', label: null, labelColor: 'text.secondary' },
+    changed:   { bg: 'warning.light',     label: 'Changed',  labelColor: 'warning.dark' },
+    added:     { bg: 'success.light',     label: 'Added',    labelColor: 'success.dark' },
+    removed:   { bg: 'error.light',     label: 'Removed',  labelColor: 'error.dark' },
   };
 
   return (
@@ -102,7 +102,7 @@ const DiffTable = ({ diff }) => {
               <TableCell sx={{ fontSize: '0.75rem', py: 0.5 }}>
                 {row.type === 'changed'
                   ? <span style={{ color: '#DC2626', textDecoration: 'line-through' }}>{row.from?.color_name}</span>
-                  : row.type === 'added' ? <span style={{ color: '#6B7280' }}>—</span>
+                  : row.type === 'added' ? <span style={{ color: '#9E8E7A' }}>—</span>
                   : row.colorName}
                 {row.type !== 'changed' && row.company && (
                   <Chip label={row.company} size="small" sx={{ ml: 0.5, height: 16, fontSize: '0.6rem' }} />
@@ -111,7 +111,7 @@ const DiffTable = ({ diff }) => {
               <TableCell sx={{ fontSize: '0.75rem', py: 0.5 }}>
                 {row.type === 'changed'
                   ? <span style={{ color: '#16A34A', fontWeight: 700 }}>{row.to?.color_name}</span>
-                  : row.type === 'removed' ? <span style={{ color: '#6B7280' }}>—</span>
+                  : row.type === 'removed' ? <span style={{ color: '#9E8E7A' }}>—</span>
                   : row.colorName}
                 {row.type !== 'changed' && row.company && (
                   <Chip label={row.company} size="small" sx={{ ml: 0.5, height: 16, fontSize: '0.6rem' }} />
@@ -137,7 +137,7 @@ const DiffTable = ({ diff }) => {
 
 // ── Score bar ──────────────────────────────────────────────────
 const ScoreBar = ({ score }) => {
-  const color = score >= 95 ? '#DC2626' : score >= 80 ? '#D97706' : '#16A34A';
+  const color = score >= 95 ? 'error.main' : score >= 80 ? 'warning.main' : 'success.main';
   return (
     <Box sx={{ mb: 1.5 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -153,7 +153,7 @@ const ScoreBar = ({ score }) => {
         value={score}
         sx={{
           height: 6, borderRadius: 3,
-          bgcolor: '#F3F4F6',
+          bgcolor: 'action.hover',
           '& .MuiLinearProgress-bar': { bgcolor: color, borderRadius: 3 },
         }}
       />
