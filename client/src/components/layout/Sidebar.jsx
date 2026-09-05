@@ -1,6 +1,6 @@
 /**
- * Sidebar Navigation Component — KP Creation Premium
- * Grouped sections, burgundy active pill, brand logo, user profile, theme toggle.
+ * Sidebar Navigation Component — "RestroBit" style
+ * Grouped sections, orange active pill, brand logo, user profile, light/dark aware.
  */
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,7 +8,7 @@ import { useApp } from '../../contexts/AppContext';
 import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Box, Typography, Avatar, Chip, IconButton, useMediaQuery, useTheme,
-  Button, Divider, Tooltip
+  Button
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SareeIcon from '@mui/icons-material/Checkroom';
@@ -19,39 +19,35 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import InboxIcon from '@mui/icons-material/Inbox';
-import StorefrontIcon from '@mui/icons-material/Storefront';
+import SearchIcon from '@mui/icons-material/Search';
 import PeopleIcon from '@mui/icons-material/People';
-import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
-export const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH = 264;
 
-// Grouped navigation sections — only existing pages
+// Grouped nav — spec §4 final structure
 const navSections = [
   {
-    heading: 'Overview',
+    heading: 'Main',
     items: [
       { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
+      { label: 'All Sarees', path: '/sarees', icon: <SareeIcon /> },
     ],
   },
   {
     heading: 'Inventory',
     items: [
-      { label: 'All Sarees', path: '/sarees', icon: <SareeIcon /> },
       { label: 'Low Stock', path: '/low-stock', icon: <LowStockIcon />, badge: true },
+      { label: 'Stock Requests', path: '/stock-requests', icon: <WhatsAppIcon /> },
       { label: 'Stock History', path: '/history', icon: <HistoryIcon /> },
     ],
   },
-  {
-    heading: 'Operations',
-    items: [
-      { label: 'Stock Requests', path: '/stock-requests', icon: <InboxIcon /> },
-    ],
-  },
+
   {
     heading: 'System',
     items: [
-      { label: 'Settings', path: '/settings', icon: <SettingsIcon />, adminOnly: true },
+      { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
     ],
   },
 ];
@@ -65,9 +61,8 @@ const Sidebar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isLight = themeMode === 'light';
 
-  const mutedText  = 'text.secondary';
-  const idleText   = isLight ? 'text.primary' : 'text.disabled';
-  const activeBg   = isLight ? 'rgba(59,17,26,0.07)' : 'rgba(59,17,26,0.18)';
+  const mutedText = isLight ? '#9E8E7A' : '#8A7C6A';
+  const idleText = isLight ? '#2E2A24' : '#D8CABA';
 
   const handleLogout = async () => {
     await logout();
@@ -75,121 +70,65 @@ const Sidebar = () => {
   };
 
   const isItemActive = (path) => {
+    // '/sarees/add' and '/sarees/edit/...' are sub-workflows of All Sarees,
+    // so keep '/sarees' highlighted for those routes too.
     if (path === '/sarees') {
-      return location.pathname === '/sarees'
-        || location.pathname.startsWith('/sarees/add')
-        || location.pathname.startsWith('/sarees/edit');
+      return location.pathname === '/sarees' ||
+        location.pathname.startsWith('/sarees/add') ||
+        location.pathname.startsWith('/sarees/edit');
     }
-    return location.pathname === path
-      || (path !== '/' && location.pathname.startsWith(path));
+    return location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
   };
-
-  const userInitials = user?.full_name
-    ? user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'U';
 
   const drawerContent = (
     <Box sx={{
       display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
       bgcolor: 'transparent',
     }}>
-
-      {/* ── Brand Header ─────────────────────────────────────── */}
-      <Box sx={{
-        px: 2.5, pt: 2.5, pb: 2,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        minHeight: 68,
-        borderBottom: `1px solid ${theme.palette.divider}`,
-      }}>
+      {/* Brand */}
+      <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 68 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           <Box sx={{
-            width: 36, height: 36, borderRadius: '10px',
-            background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+            width: 38, height: 38, borderRadius: '11px',
+            background: 'linear-gradient(135deg, #AC9C8D 0%, #72383D 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 3px 10px rgba(59,17,26,0.30)',
-            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(114,56,61,0.40)',
           }}>
-            <StorefrontIcon sx={{ color: 'common.white', fontSize: '1.1rem' }} />
+            <StorefrontIcon sx={{ color: '#fff', fontSize: '1.25rem' }} />
           </Box>
           <Box>
-            <Typography sx={{
-              fontFamily: '"Playfair Display", Georgia, serif',
-              fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.1,
-              color: 'text.primary', letterSpacing: '-0.01em',
-            }}>
-              KP<Box component="span" sx={{ color: 'primary.main' }}>Creation</Box>
+            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.1, color: 'text.primary', letterSpacing: '-0.01em' }}>
+              KP<Box component="span" sx={{ color: 'primary.main' }}> Creation</Box>
             </Typography>
-            <Typography sx={{
-              fontSize: '0.58rem', color: mutedText,
-              letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700,
-            }}>
+            <Typography sx={{ fontSize: '0.62rem', color: mutedText, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               Inventory Portal
             </Typography>
           </Box>
         </Box>
         {isMobile && (
-          <IconButton
-            aria-label="Close sidebar"
-            onClick={() => setSidebarOpen(false)}
-            size="small"
-            sx={{ color: 'text.secondary' }}
-          >
+          <IconButton onClick={() => setSidebarOpen(false)} sx={{ color: 'text.secondary' }}>
             <ChevronLeftIcon />
           </IconButton>
         )}
       </Box>
 
-      {/* ── Quick Add CTA ─────────────────────────────────────── */}
-      <Box sx={{ px: 2, pt: 2, pb: 1 }}>
-        <Button
-          fullWidth
-          startIcon={<AddCircleOutlinedIcon sx={{ fontSize: '1rem !important' }} />}
-          onClick={() => {
-            if (location.pathname === '/stock-requests') {
-              const btn = document.getElementById('new-stock-request-btn');
-              if (btn) btn.click();
-            } else {
-              navigate('/sarees/add');
-            }
-            if (isMobile) setSidebarOpen(false);
-          }}
-          sx={{
-            bgcolor: 'primary.main',
-            color: 'common.white',
-            borderRadius: '8px',
-            py: 1.1,
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            letterSpacing: '0.02em',
-            justifyContent: 'flex-start',
-            '&:hover': { bgcolor: 'primary.dark', transform: 'none' },
-            transition: 'background-color 0.18s ease',
-          }}
-        >
-          {location.pathname === '/stock-requests' ? 'New Stock Request' : 'New Collection'}
-        </Button>
-      </Box>
 
-      {/* ── Navigation ───────────────────────────────────────── */}
-      <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 0.5 }}>
+
+      {/* Navigation */}
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 0.5 }}>
         {navSections.map((section) => {
-          const visibleItems = section.items.filter(item => {
-            if (item.adminOnly && !isAdmin) return false;
-            return true;
-          });
-          if (visibleItems.length === 0) return null;
-
+          const items = section.items;
+          if (items.length === 0) return null;
           return (
-            <Box key={section.heading} sx={{ mb: 1 }}>
+            <Box key={section.heading} sx={{ mb: 2 }}>
               <Typography sx={{
-                px: 1.5, py: 0.75,
-                fontSize: '0.58rem', fontWeight: 800,
-                letterSpacing: '0.12em', textTransform: 'uppercase', color: mutedText,
+                px: 1.5, mb: 1, fontSize: '0.62rem', fontWeight: 800,
+                letterSpacing: '0.1em', textTransform: 'uppercase', color: mutedText,
               }}>
                 {section.heading}
               </Typography>
-              <List sx={{ p: 0, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                {visibleItems.map((item) => {
+              <List sx={{ p: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                {items.map((item) => {
                   const active = isItemActive(item.path);
                   return (
                     <ListItemButton
@@ -201,56 +140,29 @@ const Sidebar = () => {
                       sx={{
                         position: 'relative',
                         borderRadius: '8px',
-                        py: 0.9, px: 1.5,
-                        minHeight: 38,
-                        bgcolor: active ? activeBg : 'transparent',
+                        py: 1, px: 2, minHeight: 40,
+                        bgcolor: active ? 'rgba(59, 17, 26, 0.05)' : 'transparent',
                         color: active ? 'primary.main' : idleText,
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          left: 0,
-                          top: '20%',
-                          bottom: '20%',
-                          width: '3px',
-                          borderRadius: '0 3px 3px 0',
-                          bgcolor: 'primary.main',
-                          opacity: active ? 1 : 0,
-                          transition: 'opacity 0.18s ease',
-                        },
+                        borderLeft: active ? '4px solid #3B111A' : '4px solid transparent',
                         '&:hover': {
-                          bgcolor: active
-                            ? activeBg
-                            : isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+                          bgcolor: active ? 'rgba(59, 17, 26, 0.08)' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.04)'),
                         },
                         transition: 'all 0.15s ease',
                       }}
                     >
                       <ListItemIcon sx={{
-                        minWidth: 30,
-                        color: active ? 'primary.main' : mutedText,
-                        '& .MuiSvgIcon-root': { fontSize: '1.15rem' },
-                        transition: 'color 0.15s ease',
+                        minWidth: 32, color: active ? 'primary.main' : mutedText,
+                        '& .MuiSvgIcon-root': { fontSize: '1.25rem' },
                       }}>
                         {item.icon}
                       </ListItemIcon>
                       <ListItemText
                         primary={item.label}
-                        slotProps={{
-                          primary: {
-                            sx: {
-                              fontSize: '0.84rem',
-                              fontWeight: active ? 700 : 600,
-                              letterSpacing: '-0.01em',
-                              color: active ? 'primary.main' : idleText,
-                            },
-                          },
-                        }}
+                        slotProps={{ primary: { fontSize: '0.85rem', fontWeight: active ? 800 : 600 } }}
                       />
                       {item.badge && (
-                        <Box sx={{
-                          width: 7, height: 7, borderRadius: '50%',
-                          bgcolor: 'error.main', flexShrink: 0, ml: 0.5,
-                        }} />
+                        <Chip label="!" size="small" color="error"
+                          sx={{ height: 18, fontSize: '0.6rem', minWidth: 18, px: 0, fontWeight: 800, borderRadius: 1 }} />
                       )}
                     </ListItemButton>
                   );
@@ -261,89 +173,36 @@ const Sidebar = () => {
         })}
       </Box>
 
-      {/* ── User Profile Footer ───────────────────────────────── */}
-      <Box sx={{
-        p: 2,
-        borderTop: `1px solid ${theme.palette.divider}`,
-      }}>
-        {/* Theme toggle */}
-        <Box sx={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          px: 1.5, py: 1,
-          borderRadius: '8px',
-          bgcolor: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
-          mb: 1.5,
-        }}>
-          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: mutedText }}>
-            {isLight ? 'Light Mode' : 'Dark Mode'}
-          </Typography>
-          <Tooltip title={`Switch to ${isLight ? 'dark' : 'light'} mode`}>
-            <IconButton
-              aria-label="Toggle theme"
-              onClick={toggleTheme}
-              size="small"
-              sx={{
-                color: mutedText,
-                '&:hover': { color: 'primary.main', bgcolor: 'transparent' },
-              }}
-            >
-              {isLight
-                ? <DarkModeIcon sx={{ fontSize: '1rem' }} />
-                : <LightModeIcon sx={{ fontSize: '1rem' }} />
-              }
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        {/* User info */}
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 1.25,
-          p: 1.25, borderRadius: '8px',
-          cursor: 'pointer',
-          '&:hover': { bgcolor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)' },
-          transition: 'background 0.15s ease',
-        }}>
-          <Avatar
-            sx={{
-              width: 32, height: 32,
-              bgcolor: 'primary.main',
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              border: '1.5px solid',
-              borderColor: isLight ? 'rgba(59,17,26,0.25)' : 'rgba(114,56,61,0.4)',
-              flexShrink: 0,
-            }}
-          >
-            {userInitials}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{
-              fontSize: '0.82rem', fontWeight: 700,
-              color: 'text.primary', lineHeight: 1.2,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {user?.full_name || 'Portal Admin'}
-            </Typography>
-            <Typography sx={{
-              fontSize: '0.62rem', fontWeight: 700,
-              color: mutedText, letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-            }}>
-              {user?.role || 'admin'}
-            </Typography>
-          </Box>
-          <Tooltip title="Logout">
-            <IconButton
-              aria-label="Sign out"
-              onClick={handleLogout}
-              size="small"
-              sx={{ color: mutedText, '&:hover': { color: 'error.main', bgcolor: 'transparent' } }}
-            >
-              <LogoutIcon sx={{ fontSize: '1rem' }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
+      {/* Contextual Action Button */}
+      <Box sx={{ px: 2, pb: 2 }}>
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={() => {
+            if (location.pathname === '/stock-requests') {
+              // Click action or trigger dialog
+              const btn = document.getElementById('new-stock-request-btn');
+              if (btn) btn.click();
+            } else {
+              navigate('/sarees/add');
+            }
+          }}
+          sx={{
+            bgcolor: 'primary.main',
+            color: '#FFFFFF',
+            borderRadius: '6px',
+            py: 1.25,
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            '&:hover': { bgcolor: '#2A0B12' }
+          }}
+        >
+          {location.pathname === '/stock-requests' ? 'New Stock Request' : 'New Collection'}
+        </Button>
       </Box>
+
     </Box>
   );
 
@@ -355,11 +214,10 @@ const Sidebar = () => {
       sx={{
         width: sidebarOpen ? DRAWER_WIDTH : 0,
         flexShrink: 0,
-        transition: 'width 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.3s ease',
         '& .MuiDrawer-paper': {
           width: DRAWER_WIDTH,
           boxSizing: 'border-box',
-          transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }}
     >
@@ -369,3 +227,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+export { DRAWER_WIDTH };

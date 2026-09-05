@@ -16,7 +16,6 @@ import {
   Collapse, LinearProgress, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Checkbox, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -28,7 +27,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import PageHeader from '../components/common/PageHeader';
 
 
 // ─────────────────────────────────────────────────────
@@ -328,10 +326,10 @@ const BeamSection = ({ beam: initialBeam, sareeId, sareeSeriesCode, onBeamUpdate
 
   return (
     <Accordion defaultExpanded sx={{ mb: 2, borderRadius: '12px !important', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'primary.light', overflow: 'hidden' }}>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', '& .MuiAccordionSummary-expandIconWrapper': { color: 'primary.contrastText' } }}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: 'primary.main', color: '#fff', '& .MuiAccordionSummary-expandIconWrapper': { color: '#fff' } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, mr: 1 }}>
-          <Chip label={`${combinations.length} combos`} size="small" sx={{ bgcolor: (theme) => alpha(theme.palette.primary.contrastText, 0.2), color: 'primary.contrastText' }} />
-          <Chip label={`${totalStock} pcs total`} size="small" sx={{ bgcolor: (theme) => alpha(theme.palette.primary.contrastText, 0.2), color: 'primary.contrastText' }} />
+          <Chip label={`${combinations.length} combos`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff' }} />
+          <Chip label={`${totalStock} pcs total`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff' }} />
           <Typography sx={{ fontWeight: 700, flex: 1 }}>{beamName || 'Unnamed Beam'}</Typography>
         </Box>
       </AccordionSummary>
@@ -765,18 +763,24 @@ const SareeEdit = () => {
 
   return (
     <Box>
-      <PageHeader
-        title={`Edit — ${saree?.series_code}`}
-        subtitle="Manage saree identity. Beams and combinations save independently."
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Inventory', href: '/sarees' }, { label: saree?.series_code, href: `/sarees/${id}` }, { label: 'Edit' }]}
-        icon={<IconButton onClick={() => navigate(-1)} color="primary" sx={{ p: 0.5, mr: 1 }}><ArrowBack /></IconButton>}
-        actions={<>
-          <Button startIcon={<WhatsAppIcon />} variant="outlined" color="success" onClick={() => setPasteOpen(true)} size="small">
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+        <IconButton onClick={() => navigate(-1)} color="primary"><ArrowBack /></IconButton>
+        <Box flex={1}>
+          <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
+            Edit — {saree?.series_code}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Saree identity saves with "Save Saree". Beams and combinations save independently.
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button startIcon={<WhatsAppIcon />} variant="outlined" color="success" onClick={() => setPasteOpen(true)}>
             Paste WhatsApp
           </Button>
-          <Button variant="outlined" onClick={() => navigate(`/sarees/${id}`)} size="small">View Detail</Button>
-        </>}
-      />
+          <Button variant="outlined" onClick={() => navigate(`/sarees/${id}`)}>View Detail</Button>
+        </Box>
+      </Box>
 
       <Grid container spacing={3}>
         {/* Saree identity */}

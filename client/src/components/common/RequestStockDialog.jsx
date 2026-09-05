@@ -181,19 +181,17 @@ const RequestStockDialog = ({
         onClose={() => { if (sent && onSuccess) onSuccess(); onClose(); }}
         maxWidth="md"
         fullWidth
-        aria-labelledby="dialog-title"
-        aria-describedby="dialog-description"
         slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{
               width: 40, height: 40, borderRadius: '50%',
-              bgcolor: isStock ? '#25D366' : isMachineDelivery ? 'info.main' : 'warning.main',
+              bgcolor: isStock ? '#25D366' : isMachineDelivery ? '#2563EB' : '#F59E0B',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background-color 0.2s'
             }}>
-              <WhatsAppIcon sx={{ color: 'common.white', fontSize: 22 }} />
+              <WhatsAppIcon sx={{ color: '#fff', fontSize: 22 }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
@@ -204,7 +202,7 @@ const RequestStockDialog = ({
               </Typography>
             </Box>
           </Box>
-          <IconButton aria-label="Close dialog" onClick={() => { if (sent && onSuccess) onSuccess(); onClose(); }} size="small"><CloseIcon /></IconButton>
+          <IconButton onClick={() => { if (sent && onSuccess) onSuccess(); onClose(); }} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 0 }}>
@@ -224,7 +222,7 @@ const RequestStockDialog = ({
                   sx={{
                     py: 1, fontWeight: 800, fontSize: '0.8rem', justifyContent: 'flex-start',
                     bgcolor: isStock ? '#25D366' : 'transparent',
-                    borderColor: '#25D366', color: isStock ? 'common.white' : 'success.main',
+                    borderColor: '#25D366', color: isStock ? '#fff' : '#16A34A',
                     '&:hover': { bgcolor: isStock ? '#1ebe57' : 'rgba(37,211,102,0.08)' }
                   }}
                 >
@@ -235,9 +233,9 @@ const RequestStockDialog = ({
                   onClick={() => setMovementType('DELIVERY')}
                   sx={{
                     py: 1, fontWeight: 800, fontSize: '0.8rem', justifyContent: 'flex-start',
-                    bgcolor: isMachineDelivery ? 'info.main' : 'transparent',
-                    borderColor: 'info.main', color: isMachineDelivery ? 'common.white' : 'info.main',
-                    '&:hover': { bgcolor: isMachineDelivery ? 'info.dark' : 'rgba(37,99,235,0.08)' }
+                    bgcolor: isMachineDelivery ? '#2563EB' : 'transparent',
+                    borderColor: '#2563EB', color: isMachineDelivery ? '#fff' : '#2563EB',
+                    '&:hover': { bgcolor: isMachineDelivery ? '#1d4ed8' : 'rgba(37,99,235,0.08)' }
                   }}
                 >
                   🔵 &nbsp; Delivery (Machine)
@@ -247,9 +245,9 @@ const RequestStockDialog = ({
                   onClick={() => setMovementType('STOCK_DELIVERY')}
                   sx={{
                     py: 1, fontWeight: 800, fontSize: '0.8rem', justifyContent: 'flex-start',
-                    bgcolor: isStockDelivery ? 'warning.main' : 'transparent',
-                    borderColor: 'warning.main', color: isStockDelivery ? 'common.white' : 'warning.main',
-                    '&:hover': { bgcolor: isStockDelivery ? 'warning.dark' : 'rgba(245,158,11,0.08)' }
+                    bgcolor: isStockDelivery ? '#F59E0B' : 'transparent',
+                    borderColor: '#F59E0B', color: isStockDelivery ? '#fff' : '#D97706',
+                    '&:hover': { bgcolor: isStockDelivery ? '#d97706' : 'rgba(245,158,11,0.08)' }
                   }}
                 >
                   🟠 &nbsp; Stock Delivery (Customer)
@@ -333,15 +331,15 @@ const RequestStockDialog = ({
                   MESSAGE PREVIEW
                 </Typography>
                 <Tooltip title="Copy message">
-                  <IconButton aria-label="Copy message" size="small" onClick={handleCopy}><ContentCopyIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" onClick={handleCopy}><ContentCopyIcon fontSize="small" /></IconButton>
                 </Tooltip>
               </Box>
 
               <Paper variant="outlined" sx={{
-                flex: 1, p: 2, borderRadius: 2, bgcolor: 'success.light',
+                flex: 1, p: 2, borderRadius: 2, bgcolor: '#f0fdf4',
                 fontFamily: '"Courier New", Courier, monospace', fontSize: '0.88rem',
                 lineHeight: 1.7, whiteSpace: 'pre-wrap', overflowY: 'auto',
-                borderColor: 'success.main', color: 'success.dark'
+                borderColor: '#86efac', color: '#15803d'
               }}>
                 {message}
               </Paper>
@@ -388,8 +386,8 @@ const RequestStockDialog = ({
             onClick={handleSend}
             sx={{
               minWidth: 240,
-              bgcolor: isStock ? '#25D366' : isMachineDelivery ? 'info.main' : 'warning.main',
-              '&:hover': { bgcolor: isStock ? '#1ebe57' : isMachineDelivery ? 'info.dark' : 'warning.dark' },
+              bgcolor: isStock ? '#25D366' : isMachineDelivery ? '#2563EB' : '#F59E0B',
+              '&:hover': { bgcolor: isStock ? '#1ebe57' : isMachineDelivery ? '#1d4ed8' : '#d97706' },
               '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }
             }}
           >

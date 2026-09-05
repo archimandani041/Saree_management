@@ -84,7 +84,7 @@ const SetNewPassword = () => {
           fontFamily: '"Playfair Display", Georgia, serif',
           color: '#322D29', fontWeight: 800, letterSpacing: '0.02em', mb: 0.5
         }}>
-          KP <Box component="span" sx={{ color: 'primary.light' }}>Creation</Box>
+          KP <Box component="span" sx={{ color: '#72383D' }}>Creation</Box>
         </Typography>
 
         {!done ? (
@@ -101,7 +101,7 @@ const SetNewPassword = () => {
             </Typography>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 2.5, bgcolor: 'rgba(114,56,61,0.08)', color: 'primary.light', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2 }}>
+              <Alert severity="error" sx={{ mb: 2.5, bgcolor: 'rgba(114,56,61,0.08)', color: '#72383D', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2 }}>
                 {error}
               </Alert>
             )}
@@ -161,7 +161,7 @@ const SetNewPassword = () => {
                 fullWidth
                 disabled={loading}
                 sx={{
-                  bgcolor: 'primary.light', color: 'common.white', borderRadius: '8px',
+                  bgcolor: '#72383D', color: '#FFF', borderRadius: '8px',
                   py: 1.5, fontSize: '0.92rem', fontWeight: 600,
                   textTransform: 'none', boxShadow: 'none', mt: 0.5,
                   '&:hover': { bgcolor: '#592B2F', boxShadow: 'none' },
@@ -178,7 +178,7 @@ const SetNewPassword = () => {
             <Typography variant="h6" sx={{ color: '#322D29', fontWeight: 700 }}>
               Password updated!
             </Typography>
-            <Alert severity="success" sx={{ bgcolor: 'rgba(34,197,94,0.08)', color: 'success.main', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 2, width: '100%' }}>
+            <Alert severity="success" sx={{ bgcolor: 'rgba(34,197,94,0.08)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 2, width: '100%' }}>
               Your password has been changed. Redirecting to login…
             </Alert>
           </Box>

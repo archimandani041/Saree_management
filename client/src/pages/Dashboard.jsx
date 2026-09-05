@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useDebouncedCallback } from '../hooks/useDebounce';
-import { alpha } from '@mui/material/styles';
 import {
-  Grid, Paper, Box, Typography,
+  Grid, Paper, Box, Typography, Card, CardContent,
   Table, TableBody, TableCell, TableContainer, TableRow, TableHead,
   Button, useTheme, Skeleton, Chip, MenuItem, Select, FormControl,
   ButtonGroup, Autocomplete, TextField, LinearProgress,
@@ -36,8 +35,6 @@ import {
 } from 'recharts';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import RequestStockDialog from '../components/common/RequestStockDialog';
-import StatCard from '../components/common/StatCard';
-import { DashboardSkeleton } from '../components/common/SkeletonLoader';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -241,8 +238,39 @@ const Dashboard = () => {
   const stockTurnover = stats.currentStock > 0 ? Math.round((stats.delivered / stats.currentStock) * 1000) / 10 : 0;
   const stockDemandRatio = avgDailyDelivery > 0 ? Math.round((stats.currentStock / avgDailyDelivery) * 10) / 10 : 999;
 
-  // KpiCard is now StatCard — keeping this alias for any inline uses
-  const KpiCard = (props) => <StatCard {...props} loading={loading && !data} />;
+  // Reusable compact KPI card — flat editorial style matching image
+  const KpiCard = ({ label, sublabel, value, unit, icon, tint, trendPercent }) => (
+    <Card sx={{ border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }}>
+      <CardContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1, minHeight: 120 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.68rem' }}>
+            {label}
+          </Typography>
+          <Box sx={{ color: tint, bgcolor: `${tint}18`, p: 0.75, borderRadius: '6px', display: 'flex' }}>
+            {icon}
+          </Box>
+        </Box>
+        {loading && !data ? <Skeleton width="55%" height={40} /> : (
+          <Typography sx={{ fontWeight: 800, fontSize: '2rem', color: 'text.primary', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+            {value}{unit && <Box component="span" sx={{ fontSize: '0.95rem', fontWeight: 500, ml: 0.5, color: 'text.secondary' }}>{unit}</Box>}
+          </Typography>
+        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minHeight: 20 }}>
+          {typeof trendPercent === 'number' && (
+            <Chip
+              label={`${trendPercent >= 0 ? '↑' : '↓'} ${Math.abs(trendPercent)}%`}
+              color={trendPercent >= 0 ? 'success' : 'error'}
+              size="small"
+              sx={{ height: 18, fontSize: '0.62rem', fontWeight: 800, borderRadius: '4px' }}
+            />
+          )}
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.72rem' }}>
+            {sublabel}
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
+  );
 
   const statusMeta = {
     live: { label: 'Live', color: theme.palette.success.main },
@@ -251,15 +279,10 @@ const Dashboard = () => {
     disabled: { label: 'Offline', color: theme.palette.text.disabled }
   }[realtimeStatus] || { label: 'Offline', color: theme.palette.text.disabled };
 
-  // Full dashboard skeleton on initial load
-  if (loading && !data) {
-    return <DashboardSkeleton />;
-  }
-
   return (
     <Box sx={{ flexGrow: 1, p: { xs: 1.5, md: 3 }, maxWidth: 1500, mx: 'auto', position: 'relative' }}>
       {loading && data && (
-        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 2, borderRadius: 0 }} color="primary" />
+        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
       )}
 
       {/* HEADER */}
@@ -328,35 +351,20 @@ const Dashboard = () => {
           {/* KPI CARDS */}
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Total Sarees" sublabel="Master catalog items"
-                value={(stats.totalSarees ?? 0).toLocaleString()}
-                icon={<SareeIcon />} tint={theme.palette.primary.main}
-                onClick={() => navigate('/sarees')}
-              />
+              <KpiCard label="Total Sarees" sublabel="Master catalog items" value={(stats.totalSarees ?? 0).toLocaleString()}
+                icon={<SareeIcon />} tint={theme.palette.primary.main} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Current Stock" sublabel="Total physical units"
-                value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
-                icon={<GridIcon />} tint={theme.palette.primary.light}
-              />
+              <KpiCard label="Current Stock" sublabel="Total physical units" value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
+                icon={<GridIcon />} tint={theme.palette.secondary.main} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Delivered Out" sublabel="vs prior period"
-                value={(stats.delivered ?? 0).toLocaleString()} unit="pcs"
-                icon={<DeliveryIcon />} tint={theme.palette.error.main}
-                trendPercent={stats?.comparison?.deliveredPercent ?? 0}
-              />
+              <KpiCard label="Delivery Out" sublabel="vs prior period" value={(stats.delivered ?? 0).toLocaleString()} unit="pcs"
+                icon={<DeliveryIcon />} tint={theme.palette.error.main} trendPercent={stats?.comparison?.deliveredPercent ?? 0} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Stock Added" sublabel="vs prior period"
-                value={(stats.added ?? 0).toLocaleString()} unit="pcs"
-                icon={<PurchaseIcon />} tint={theme.palette.success.main}
-                trendPercent={stats?.comparison?.addedPercent ?? 0}
-              />
+              <KpiCard label="Stock In" sublabel="vs prior period" value={(stats.added ?? 0).toLocaleString()} unit="pcs"
+                icon={<PurchaseIcon />} tint={theme.palette.success.main} trendPercent={stats?.comparison?.addedPercent ?? 0} />
             </Grid>
           </Grid>
 
@@ -365,36 +373,36 @@ const Dashboard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, flexWrap: 'wrap' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/low-stock')}>
-                  <Box sx={{ bgcolor: 'warning.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><WarningIcon color="warning" sx={{ fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'rgba(245,158,11,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><WarningIcon color="warning" sx={{ fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Low Stock <Box component="span" sx={{ color: 'warning.main', fontWeight: 800 }}>{stats.lowStock}</Box></Typography>
                 </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/sarees?status=out')}>
-                  <Box sx={{ bgcolor: 'error.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><ErrorIcon color="error" sx={{ fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'rgba(239,68,68,0.1)', p: 0.6, borderRadius: '5px', display: 'flex' }}><ErrorIcon color="error" sx={{ fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Out of Stock <Box component="span" sx={{ color: 'error.main', fontWeight: 800 }}>{stats.outOfStock}</Box></Typography>
                 </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-requests')}>
-                  <Box sx={{ bgcolor: 'info.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><PendingIcon color="info" sx={{ fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'rgba(56,189,248,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><PendingIcon color="info" sx={{ fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Pending <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.pendingRequests}</Box></Typography>
                 </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-history?action=Rollback')}>
-                  <Box sx={{ bgcolor: 'info.light', p: 0.6, borderRadius: '5px', display: 'flex' }}><SwapVertIcon sx={{ color: 'info.main', fontSize: 16 }} /></Box>
+                  <Box sx={{ bgcolor: 'rgba(168,85,247,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><SwapVertIcon sx={{ color: '#A855F7', fontSize: 16 }} /></Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                    Today's Rollbacks <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.todayRollbacks || 0}</Box>
+                    Today's Rollbacks <Box component="span" sx={{ color: '#A855F7', fontWeight: 800 }}>{stats.todayRollbacks || 0}</Box>
                     <Box component="span" sx={{ color: 'text.secondary', ml: 0.75, fontSize: '0.72rem' }}>(Total: {stats.totalRollbacks || 0})</Box>
                   </Typography>
                 </Box>
               </Box>
               <Button variant="contained" size="small" onClick={() => navigate('/stock-requests')}
-                sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}>
+                sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', bgcolor: '#3B111A', '&:hover': { bgcolor: '#2A0B12' } }}>
                 Create Purchase Order
               </Button>
             </Box>
             {stats.lastRollback && (
               <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: 'info.main', letterSpacing: '0.04em' }}>LAST ROLLBACK:</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#A855F7', letterSpacing: '0.04em' }}>LAST ROLLBACK:</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                   {stats.lastRollback.series_code} · {stats.lastRollback.combination_name} by <b>{stats.lastRollback.user_name}</b> ({new Date(stats.lastRollback.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}) — <i>"{stats.lastRollback.reason}"</i>
                 </Typography>
@@ -407,32 +415,29 @@ const Dashboard = () => {
             <Grid size={{ xs: 12, md: 8 }}>
               <Paper sx={{ p: 3, height: 400 }} elevation={0}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary' }}>Stock In vs Delivered Out</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>Movement trend for selected period</Typography>
-                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>Stock In vs Stock Out</Typography>
                   <ButtonGroup size="small" variant="outlined" color="primary">
                     <Button variant={grouping === 'daily' ? 'contained' : 'outlined'} onClick={() => setGrouping('daily')}>Daily</Button>
                     <Button variant={grouping === 'weekly' ? 'contained' : 'outlined'} onClick={() => setGrouping('weekly')}>Weekly</Button>
                     <Button variant={grouping === 'monthly' ? 'contained' : 'outlined'} onClick={() => setGrouping('monthly')}>Monthly</Button>
                   </ButtonGroup>
                 </Box>
-                {stockMovement.length === 0 ? (
-                  <Box sx={{ height: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                    <GridIcon sx={{ fontSize: '2rem', color: 'text.disabled' }} />
-                    <Typography color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.88rem' }}>No movement data for this period</Typography>
-                    <Typography variant="caption" color="text.disabled">Try expanding the date range</Typography>
+                {loading && !data ? (
+                  <Skeleton variant="rectangular" height="75%" sx={{ borderRadius: 2 }} />
+                ) : stockMovement.length === 0 ? (
+                  <Box sx={{ height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography color="text.secondary" sx={{ fontWeight: 600 }}>More stock movement history is needed to generate this trend.</Typography>
                   </Box>
                 ) : (
                   <ResponsiveContainer width="100%" height="82%">
-                    <BarChart data={stockMovement} barGap={4} barCategoryGap="32%">
-                      <CartesianGrid strokeDasharray="2 4" vertical={false} stroke={theme.palette.divider} />
-                      <XAxis dataKey="label" stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                      <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: isLight ? 'rgba(59,17,26,0.03)' : 'rgba(255,255,255,0.03)' }} />
-                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} />
-                      <Bar dataKey="stockAdded" name="Stock In" fill={theme.palette.success.main} radius={[4, 4, 0, 0]} maxBarSize={32} />
-                      <Bar dataKey="stockDelivered" name="Delivered Out" fill={theme.palette.error.main} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                    <BarChart data={stockMovement} barGap={2} barCategoryGap="30%">
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+                      <XAxis dataKey="label" stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} axisLine={false} />
+                      <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" />
+                      <Bar dataKey="stockAdded" name="Stock Added" fill="#22C55E" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="stockDelivered" name="Stock Delivered" fill="#EF4444" radius={[3, 3, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -482,16 +487,16 @@ const Dashboard = () => {
           {/* AI DEMAND PREDICTION BANNER — dark maroon matching image */}
           {selectedSaree && (
             <Box sx={{
-              bgcolor: 'primary.main', borderRadius: '8px', px: 3, py: 2, mb: 2.5,
+              bgcolor: '#3B111A', borderRadius: '8px', px: 3, py: 2, mb: 2.5,
               display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
-              '&:hover': { bgcolor: 'primary.dark' }, transition: 'background 0.2s'
+              '&:hover': { bgcolor: '#2A0B12' }, transition: 'background 0.2s'
             }} onClick={() => setActiveTab(1)}>
-              <SparklesIcon sx={{ color: 'brand.gold', fontSize: 20 }} />
-              <Typography sx={{ color: 'brand.gold', fontWeight: 700, fontSize: '0.9rem' }}>
+              <SparklesIcon sx={{ color: '#F0C98A', fontSize: 20 }} />
+              <Typography sx={{ color: '#F0C98A', fontWeight: 700, fontSize: '0.9rem' }}>
                 AI Demand Prediction{selectedSaree?.series_code ? `: ${selectedSaree.series_code} — ${selectedSaree.sari_name || ''}` : ''}
               </Typography>
               <Box sx={{ ml: 'auto' }}>
-                <ArrowForwardIcon sx={{ color: 'brand.gold', opacity: 0.7, fontSize: 18 }} />
+                <ArrowForwardIcon sx={{ color: 'rgba(240,201,138,0.7)', fontSize: 18 }} />
               </Box>
             </Box>
           )}
@@ -567,7 +572,7 @@ const Dashboard = () => {
                         ) : (
                           <Box sx={{
                             width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08), display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '1.2rem'
                           }}>🧵</Box>
                         )}
@@ -636,7 +641,7 @@ const Dashboard = () => {
                         ) : (
                           <Box sx={{
                             width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                            bgcolor: (theme) => alpha(theme.palette.success.main, 0.08), display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '1.2rem'
                           }}>🧵</Box>
                         )}

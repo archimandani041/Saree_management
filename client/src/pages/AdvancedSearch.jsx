@@ -14,7 +14,6 @@ import {
   DialogContent, DialogActions, Alert, CircularProgress, Breadcrumbs, Link,
   Tooltip, Accordion, AccordionSummary, AccordionDetails, Divider, Slider, LinearProgress
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import {
   Search as SearchIcon, FilterList as FilterIcon, Edit as EditIcon,
   Delete as DeleteIcon, ContentCopy as DuplicateIcon, Visibility as ViewIcon,
@@ -432,7 +431,7 @@ const AdvancedSearch = () => {
                         <Box sx={{
                           height: 160, display: 'flex', flexDirection: 'column',
                           alignItems: 'center', justifyContent: 'center',
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04), gap: 1
+                          bgcolor: 'rgba(59,17,26,0.04)', gap: 1
                         }}>
                           <Box sx={{ fontSize: 36, opacity: 0.25 }}>🧵</Box>
                           <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, letterSpacing: '0.12em' }}>

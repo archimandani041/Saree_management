@@ -13,8 +13,7 @@ import {
   TableRow, TablePagination, Typography, TextField, Button, MenuItem,
   Select, InputLabel, FormControl, Grid, IconButton, Chip, Avatar,
   Dialog, DialogActions, DialogContent, DialogTitle,
-  Skeleton, InputAdornment, LinearProgress, Tooltip, Collapse,
-  ToggleButton, ToggleButtonGroup, Card, CardContent, alpha
+  Skeleton, InputAdornment, LinearProgress, Tooltip, Collapse
 } from '@mui/material';
 import {
   Visibility,
@@ -28,43 +27,33 @@ import {
   KeyboardArrowRight,
   WhatsApp as WhatsAppIcon,
   MoreVert as MoreVertIcon,
-  History as HistoryIcon,
-  Checkroom as SareeIcon,
-  GridView as GridViewIcon,
-  ViewList as ViewListIcon
+  History as HistoryIcon
 } from '@mui/icons-material';
 import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
 import { getStockHealth } from '../constants/terms';
 import RequestStockDialog from '../components/common/RequestStockDialog';
-import PageHeader from '../components/common/PageHeader';
-import EmptyState from '../components/common/EmptyState';
-import StatusBadge from '../components/common/StatusBadge';
-import { TableSkeleton } from '../components/common/SkeletonLoader';
 
 
 // Filter tabs mapped to the existing `status` filter values
 const STATUS_TABS = [
   { label: 'All Sarees', value: '' },
-  { label: 'In Stock', value: 'in_stock' },
-  { label: 'Low Stock', value: 'low' },
-  { label: 'Out of Stock', value: 'out' },
 ];
 
 const getStockStatus = (total, min) => {
-  if (!total || total === 0) return { label: 'Out of Stock', chipBg: 'error.light', chipColor: 'error.main', bar: 'error.main' };
-  if (total <= (min ?? 0)) return { label: 'Low Stock', chipBg: 'warning.light', chipColor: 'warning.dark', bar: 'warning.main' };
-  return { label: 'In Stock', chipBg: 'success.light', chipColor: 'success.main', bar: 'success.main' };
+  if (!total || total === 0) return { label: 'Out of Stock', chipBg: 'rgba(239,68,68,0.14)', chipColor: 'error.main', bar: 'error.main' };
+  if (total <= (min ?? 0)) return { label: 'Low Stock', chipBg: 'rgba(245,158,11,0.16)', chipColor: 'warning.dark', bar: 'warning.main' };
+  return { label: 'In Stock', chipBg: 'sidebar.active', chipColor: 'primary.dark', bar: 'primary.main' };
 };
 
-// Clean stock capacity bar
+// FreshCart-style stock capacity bar
 const StockBar = ({ total, min, max, barColor }) => {
   const value = total ?? 0;
   const cap = max && max > 0 ? max : Math.max(value, (min ?? 0) * 2, 1);
   const pct = value > 0 ? Math.max(6, Math.min(100, Math.round((value / cap) * 100))) : 0;
   return (
-    <Box sx={{ minWidth: 140, maxWidth: 200 }}>
+    <Box sx={{ minWidth: 150, maxWidth: 210 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.5 }}>
-        <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.86rem' }}>
+        <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.9rem' }}>
           {value}<Box component="span" sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '0.72rem' }}> pcs</Box>
         </Typography>
         <Typography component="span" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>Min {min ?? 0}</Typography>
@@ -73,8 +62,23 @@ const StockBar = ({ total, min, max, barColor }) => {
         variant="determinate"
         value={pct}
         sx={{
-          height: 6, borderRadius: 4, bgcolor: 'action.hover',
-          '& .MuiLinearProgress-bar': { borderRadius: 4, bgcolor: barColor },
+          height: 7, borderRadius: 5, bgcolor: 'action.hover',
+          '& .MuiLinearProgress-bar': { borderRadius: 5, bgcolor: barColor },
+        }}
+      />
+
+      {/* Request Stock Dialog — opens inline, user stays on this page */}
+      <RequestStockDialog
+        open={requestDialogOpen}
+        onClose={() => setRequestDialogOpen(false)}
+        combination={requestCombo}
+        beamName={requestBeamName}
+        seriesCode={requestSeriesCode}
+        sareeId={requestSareeId}
+        initialMovementType={requestMovementType}
+        onSuccess={() => {
+          fetchSarees();
+          setRequestDialogOpen(false);
         }}
       />
     </Box>
@@ -99,7 +103,6 @@ const AllSarees = () => {
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
 
   // Data states
   const [sarees, setSarees] = useState([]);
@@ -454,25 +457,30 @@ const AllSarees = () => {
 
   return (
     <Box>
-      <PageHeader
-        title="Sarees Inventory"
-        icon={<SareeIcon />}
-        subtitle={`${total.toLocaleString()} items in collection · Browse, manage and audit stock`}
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Sarees Inventory' }]}
-        actions={<>
-          <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExportExcel} size="small">
+      {/* Title Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ mb: 0.5 }}>
+            Sarees Inventory
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Browse, manage, and audit your saree stock
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExportExcel}>
             Export
           </Button>
           {(isAdmin || isStaff) && (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/sarees/add')} size="small">
-              Add Saree
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/sarees/add')}>
+              Add New Saree
             </Button>
           )}
-        </>}
-      />
+        </Box>
+      </Box>
 
-      {/* Toolbar: filter tabs + search + view mode toggle + advanced filters */}
-      <Paper sx={{ p: 2.5, mb: 3, borderRadius: '10px' }}>
+      {/* Toolbar: filter tabs + search + advanced filters */}
+      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
           {/* Pill tabs */}
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -485,18 +493,13 @@ const AllSarees = () => {
                   type="button"
                   onClick={() => handleTabChange(tab.value)}
                   sx={{
-                    border: '1px solid',
-                    borderColor: active ? 'primary.main' : 'divider',
-                    cursor: 'pointer', font: 'inherit',
-                    px: 2, py: 0.75, borderRadius: 99, fontWeight: 700, fontSize: '0.78rem',
-                    transition: 'all 0.18s ease',
-                    bgcolor: active ? 'primary.main' : 'action.hover',
-                    color: active ? 'common.white' : 'text.secondary',
+                    border: active ? 'none' : '1px solid #EAE6E1', cursor: 'pointer', font: 'inherit',
+                    px: 2.25, py: 1, borderRadius: 99, fontWeight: 700, fontSize: '0.8rem',
+                    transition: 'all 0.15s ease',
+                    bgcolor: active ? 'primary.main' : '#FAF8F5',
+                    color: active ? '#FFFFFF' : '#7C726A',
                     boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor: active ? 'primary.dark' : 'action.selected',
-                      color: active ? 'common.white' : 'text.primary'
-                    },
+                    '&:hover': { bgcolor: active ? '#2A0B12' : '#F2EFEA', color: active ? '#FFFFFF' : '#241C1A' },
                   }}
                 >
                   {tab.label}
@@ -505,8 +508,8 @@ const AllSarees = () => {
             })}
           </Box>
 
-          {/* Right: Search + Clear + View Mode Switcher */}
-          <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
+          {/* Search */}
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', width: { xs: '100%', sm: 'auto' } }}>
             {hasAnyFilter && (
               <Button
                 variant="outlined"
@@ -514,7 +517,7 @@ const AllSarees = () => {
                 size="small"
                 onClick={clearAllFilters}
                 startIcon={<ClearIcon />}
-                sx={{ height: 38, borderRadius: '8px', fontSize: '0.78rem' }}
+                sx={{ height: 40, borderRadius: 2 }}
               >
                 Clear Filters
               </Button>
@@ -524,7 +527,7 @@ const AllSarees = () => {
               placeholder="Search Saree, Beam, F-Color, Company, Brand…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              sx={{ minWidth: { xs: '100%', sm: 300 } }}
+              sx={{ minWidth: { xs: '100%', sm: 320 } }}
               slotProps={{
                 input: {
                   startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>,
@@ -536,31 +539,6 @@ const AllSarees = () => {
                 }
               }}
             />
-            {/* View Mode Toggle */}
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, next) => next && setViewMode(next)}
-              size="small"
-              sx={{
-                borderRadius: '8px',
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                '& .MuiToggleButton-root': {
-                  px: 1.25, py: 0.6, border: 'none',
-                  color: 'text.secondary',
-                  '&.Mui-selected': { bgcolor: 'primary.main', color: 'common.white', '&:hover': { bgcolor: 'primary.dark' } }
-                }
-              }}
-            >
-              <ToggleButton value="table" aria-label="table view">
-                <Tooltip title="Data Table View"><ViewListIcon sx={{ fontSize: '1.1rem' }} /></Tooltip>
-              </ToggleButton>
-              <ToggleButton value="grid" aria-label="gallery view">
-                <Tooltip title="Lookbook Gallery View"><GridViewIcon sx={{ fontSize: '1.1rem' }} /></Tooltip>
-              </ToggleButton>
-            </ToggleButtonGroup>
           </Box>
         </Box>
 
@@ -610,170 +588,17 @@ const AllSarees = () => {
 
       {/* Table */}
       {loading && sarees.length > 0 && (
-        <LinearProgress sx={{ height: 2, mb: 2, borderRadius: 0 }} />
+        <LinearProgress sx={{ height: 3, mb: 2, borderRadius: 1.5 }} />
       )}
       {loading && sarees.length === 0 ? (
-        <Paper sx={{ borderRadius: '10px', overflow: 'hidden' }}>
-          <TableSkeleton rows={7} cols={6} />
+        <Paper sx={{ p: 2, borderRadius: 4 }}>
+          {[...Array(6)].map((_, index) => (
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+              <Skeleton variant="rounded" width={46} height={46} />
+              <Skeleton height={28} sx={{ flex: 1 }} />
+            </Box>
+          ))}
         </Paper>
-      ) : sarees.length === 0 ? (
-        <Paper sx={{ borderRadius: '10px' }}>
-          <EmptyState
-            variant={hasAnyFilter ? 'no-results' : 'no-products'}
-            onCta={hasAnyFilter ? undefined : () => navigate('/sarees/add')}
-          />
-        </Paper>
-      ) : viewMode === 'grid' ? (
-        <Box>
-          <Grid container spacing={2.5}>
-            {sarees.map((saree) => {
-              const st = getStockStatus(saree.total_stock, saree.min_stock);
-              const sareeImg = saree.image_url || saree.beams?.flatMap(b => b.combinations || []).find(c => c.image_url)?.image_url;
-              const totalCombos = saree.beams?.reduce((acc, b) => acc + (b.combinations?.length || 0), 0) || 0;
-
-              return (
-                <Grid key={saree.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      bgcolor: 'background.paper',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-                      '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: (theme) => theme.palette.surface.shadowHover,
-                        borderColor: 'primary.light',
-                      }
-                    }}
-                    onClick={() => navigate(`/sarees/${saree.id}`)}
-                  >
-                    {/* Image with Tag Overlays */}
-                    <Box sx={{ position: 'relative', height: 210, bgcolor: 'action.hover', overflow: 'hidden' }}>
-                      {sareeImg ? (
-                        <Box
-                          component="img"
-                          src={sareeImg}
-                          alt={saree.sari_name}
-                          loading="lazy"
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s ease', '&:hover': { transform: 'scale(1.05)' } }}
-                        />
-                      ) : (
-                        <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', color: 'primary.main' }}>
-                          <SareeIcon sx={{ fontSize: 44, opacity: 0.7 }} />
-                          <Typography variant="caption" sx={{ fontWeight: 800, mt: 0.5, letterSpacing: '0.05em' }}>
-                            {saree.series_code}
-                          </Typography>
-                        </Box>
-                      )}
-                      <Box sx={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: 0.6 }}>
-                        <Chip
-                          label={saree.series_code}
-                          size="small"
-                          sx={{
-                            bgcolor: 'rgba(26,21,18,0.85)',
-                            color: 'common.white',
-                            fontWeight: 800,
-                            backdropFilter: 'blur(8px)',
-                            fontSize: '0.72rem',
-                          }}
-                        />
-                        {saree.brand && (
-                          <Chip
-                            label={saree.brand}
-                            size="small"
-                            sx={{
-                              bgcolor: saree.brand === 'KP' ? 'primary.main' : 'warning.main',
-                              color: 'common.white',
-                              fontWeight: 800,
-                              fontSize: '0.66rem',
-                            }}
-                          />
-                        )}
-                      </Box>
-                      <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
-                        <Box sx={{ px: 1, py: 0.3, borderRadius: '6px', bgcolor: 'background.paper', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: st.bar }} />
-                          <Typography sx={{ fontSize: '0.68rem', fontWeight: 800, color: st.chipColor }}>
-                            {st.label}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    {/* Card Body */}
-                    <CardContent sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'text.primary' }} noWrap>
-                          {renderHighlighted(saree.sari_name)}
-                        </Typography>
-                        {saree.price != null && (
-                          <Typography sx={{ fontWeight: 800, color: 'primary.main', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
-                            ₹{Number(saree.price).toLocaleString('en-IN')}
-                          </Typography>
-                        )}
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.74rem', color: 'text.secondary', fontWeight: 600 }}>
-                        <span>{saree.beams?.length || 0} Beams</span>
-                        <span>•</span>
-                        <span>{totalCombos} Combos</span>
-                      </Box>
-
-                      {/* Stock capacity bar */}
-                      <Box sx={{ mt: 'auto', pt: 1 }}>
-                        <StockBar total={saree.total_stock} min={saree.min_stock ?? 20} max={saree.maximum_stock} barColor={st.bar} />
-                      </Box>
-                    </CardContent>
-
-                    {/* Quick Actions Footer */}
-                    <Box sx={{ px: 2, py: 1.25, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'action.hover' }}>
-                      <Button size="small" variant="text" onClick={(e) => { e.stopPropagation(); navigate(`/sarees/${saree.id}`); }} sx={{ fontSize: '0.74rem', fontWeight: 700, p: 0 }}>
-                        View Details
-                      </Button>
-                      <Box sx={{ display: 'flex', gap: 0.5 }} onClick={e => e.stopPropagation()}>
-                        <Tooltip title="View Details">
-                          <IconButton size="small" onClick={() => navigate(`/sarees/${saree.id}`)}>
-                            <Visibility fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        {(isAdmin || isStaff) && (
-                          <>
-                            <Tooltip title="Edit">
-                              <IconButton size="small" color="primary" onClick={() => navigate(`/sarees/edit/${saree.id}`)}>
-                                <Edit fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton size="small" color="error" onClick={() => handleDeleteClick(saree)}>
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                      </Box>
-                    </Box>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50, 100]}
-            component="div"
-            count={total}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{ mt: 2 }}
-          />
-        </Box>
       ) : (
         <TableContainer component={Paper} sx={{ borderRadius: 4 }}>
           <Table>
@@ -1134,21 +959,6 @@ const AllSarees = () => {
           <Button onClick={() => setSnackbarOpen(false)} variant="contained" size="small">OK</Button>
         </DialogActions>
       </Dialog>
-
-      {/* Request Stock Dialog */}
-      <RequestStockDialog
-        open={requestDialogOpen}
-        onClose={() => setRequestDialogOpen(false)}
-        combination={requestCombo}
-        beamName={requestBeamName}
-        seriesCode={requestSeriesCode}
-        sareeId={requestSareeId}
-        initialMovementType={requestMovementType}
-        onSuccess={() => {
-          fetchSarees();
-          setRequestDialogOpen(false);
-        }}
-      />
 
     </Box>
   );

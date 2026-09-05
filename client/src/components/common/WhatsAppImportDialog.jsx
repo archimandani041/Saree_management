@@ -46,14 +46,14 @@ const ConfidenceBadge = ({ score }) => {
 
 // ── Duplicate status badge ───────────────────────────────────────
 const STATUS_BADGE = {
-  NEW:            { label: 'NEW',       color: 'success.dark', bg: 'success.light' },
-  NEW_SAREE:      { label: 'NEW',       color: 'success.dark', bg: 'success.light' },
-  NEW_BEAM:       { label: 'NEW',       color: 'success.dark', bg: 'success.light' },
-  UPDATE:         { label: 'UPDATE',    color: 'info.dark',    bg: 'info.light' },
-  DUPLICATE:      { label: 'DUPLICATE', color: 'error.dark',   bg: 'error.light' },
-  SIMILAR:        { label: 'SIMILAR',   color: 'warning.dark', bg: 'warning.light' },
-  IMAGE_CONFLICT: { label: 'IMAGE',     color: 'info.dark',    bg: 'info.light' },
-  CHECKING:       { label: '...',       color: 'text.secondary', bg: 'action.hover' },
+  NEW:            { label: 'NEW',       color: '#16A34A', bg: '#F0FDF4' },
+  NEW_SAREE:      { label: 'NEW',       color: '#16A34A', bg: '#F0FDF4' },
+  NEW_BEAM:       { label: 'NEW',       color: '#16A34A', bg: '#F0FDF4' },
+  UPDATE:         { label: 'UPDATE',    color: '#2563EB', bg: '#EFF6FF' },
+  DUPLICATE:      { label: 'DUPLICATE', color: '#DC2626', bg: '#FEF2F2' },
+  SIMILAR:        { label: 'SIMILAR',   color: '#D97706', bg: '#FFFBEB' },
+  IMAGE_CONFLICT: { label: 'IMAGE',     color: '#7C3AED', bg: '#F5F3FF' },
+  CHECKING:       { label: '...',       color: '#6B7280', bg: '#F9FAFB' },
 };
 const StatusBadge = ({ status }) => {
   const cfg = STATUS_BADGE[status] || STATUS_BADGE.NEW;

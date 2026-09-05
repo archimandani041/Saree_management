@@ -1,17 +1,19 @@
+/**
+ * Low Stock — Action Page (spec §12)
+ * Every item is directly actionable: shows shortage, AI recommendation, and Request Stock button.
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import RequestStockDialog from '../components/common/RequestStockDialog';
 import { getStockHealth } from '../constants/terms';
-import PageHeader from '../components/common/PageHeader';
-import EmptyState from '../components/common/EmptyState';
-import { ListSkeleton } from '../components/common/SkeletonLoader';
+
 
 import {
-  Box, Paper, Typography, Chip, Button, LinearProgress
+  Box, Paper, Typography, Chip, Button, Alert, CircularProgress, LinearProgress
 } from '@mui/material';
-import { WarningAmber, WhatsApp as WhatsAppIcon, Visibility as ViewIcon } from '@mui/icons-material';
+import { WarningAmber, WhatsApp as WhatsAppIcon } from '@mui/icons-material';
 
 const LowStock = () => {
   const navigate = useNavigate();
@@ -26,27 +28,27 @@ const LowStock = () => {
   const [selectedSareeId, setSelectedSareeId] = useState('');
 
 
-  const fetchLowStockSarees = async (silent = false) => {
-    if (!silent) setLoading(true);
+  const fetchLowStockSarees = async () => {
+    setLoading(true);
     try {
       const { data } = await sareeAPI.getAll({ status: 'low', limit: 100 });
       setSarees(data.sarees || []);
     } catch (error) {
       console.error('Failed to load low stock sarees:', error);
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => { fetchLowStockSarees(); }, []);
 
-  // Real-time subscriptions (silent refresh to preserve scroll & avoid flash)
+  // Real-time subscriptions
   useEffect(() => {
     if (!supabase) return;
     const channel = supabase
       .channel('realtime-low-stock')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => fetchLowStockSarees(true))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => fetchLowStockSarees(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => fetchLowStockSarees())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => fetchLowStockSarees())
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, []);
@@ -90,75 +92,47 @@ const LowStock = () => {
 
   if (loading) {
     return (
-      <Box sx={{ p: { xs: 2, sm: 3 } }}>
-        <PageHeader
-          title="Needs Stock"
-          icon={<WarningAmber />}
-          subtitle="Items below minimum stock levels — take action immediately."
-        />
-        <ListSkeleton rows={5} />
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress sx={{ color: 'primary.main' }} />
       </Box>
     );
   }
 
   return (
     <Box>
-      <PageHeader
-        title="Needs Stock"
-        icon={<WarningAmber />}
-        subtitle={`${lowItems.length} item${lowItems.length !== 1 ? 's' : ''} below minimum stock levels. Take action immediately.`}
-      />
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+          <WarningAmber sx={{ color: 'warning.main' }} /> Needs Stock
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Items below minimum stock levels. Request stock directly from this page.
+        </Typography>
+      </Box>
 
       {lowItems.length === 0 ? (
-        <EmptyState
-          variant="all-clear"
-          title="All stock levels are healthy!"
-          description="No items are currently below their minimum stock thresholds. Great work keeping inventory topped up!"
-        />
+        <Alert severity="success" sx={{ borderRadius: 3, p: 3 }}>
+          <Typography variant="body1" sx={{ fontWeight: 700 }}>All stock levels are healthy!</Typography>
+          No items are currently below their minimum stock thresholds.
+        </Alert>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Summary Metric Header */}
-          <Paper sx={{ p: 2, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main', animation: 'pulse 1.5s infinite' }} />
-              <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'text.primary' }}>
-                Inventory Shortage Alert
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Chip
-                label={`${lowItems.filter(i => i.stock === 0).length} Out of Stock`}
-                size="small"
-                sx={{ bgcolor: 'error.main', color: 'common.white', fontWeight: 800, fontSize: '0.72rem' }}
-              />
-              <Chip
-                label={`${lowItems.filter(i => i.stock > 0).length} Low Stock`}
-                size="small"
-                sx={{ bgcolor: 'warning.main', color: 'common.white', fontWeight: 800, fontSize: '0.72rem' }}
-              />
-            </Box>
-          </Paper>
-
           {lowItems.map((item, idx) => {
             const health = getStockHealth(item.stock, item.min);
             const isCritical = item.stock === 0;
             const pct = item.min > 0 ? Math.round((item.stock / item.min) * 100) : 0;
 
             return (
-              <Box
+              <Paper
                 key={`${item.saree.id}-${item.combo?.id || idx}`}
                 sx={{
-                  p: { xs: 2, sm: 2.5 },
-                  bgcolor: 'background.paper',
+                  p: 2.5,
+                  borderRadius: 3,
                   border: '1px solid',
                   borderColor: 'divider',
                   borderLeft: `4px solid ${health.color}`,
-                  borderRadius: '10px',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: 'primary.light',
-                    boxShadow: 'surface.shadowHover'
-                  },
+                  transition: 'box-shadow 0.15s',
+                  '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }
                 }}
               >
                 {/* Top: severity badge */}
@@ -169,16 +143,16 @@ const LowStock = () => {
                         {item.saree.series_code}
                       </Typography>
                       <Chip
-                        label={isCritical ? 'CRITICAL (OUT OF STOCK)' : 'LOW STOCK'}
+                        label={isCritical ? 'CRITICAL' : 'LOW'}
                         size="small"
                         sx={{
                           height: 20, fontSize: '0.62rem', fontWeight: 800,
-                          bgcolor: isCritical ? 'error.light' : 'warning.light',
+                          bgcolor: isCritical ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
                           color: isCritical ? 'error.main' : 'warning.dark'
                         }}
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                       {item.beam ? `${item.beam.beam_name} · ` : ''}{item.combo?.combination_name || item.saree.sari_name || 'Unnamed'}
                     </Typography>
 
@@ -192,13 +166,12 @@ const LowStock = () => {
                             size="small"
                             sx={{
                               height: 22,
-                              fontSize: '0.68rem',
+                              fontSize: '0.7rem',
                               fontWeight: 700,
-                              bgcolor: 'action.hover',
-                              color: 'text.primary',
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              borderRadius: '4px'
+                              bgcolor: 'rgba(59, 130, 246, 0.08)',
+                              color: '#1E40AF',
+                              border: '1px solid rgba(59, 130, 246, 0.2)',
+                              borderRadius: '6px'
                             }}
                           />
                         ))}
@@ -208,20 +181,20 @@ const LowStock = () => {
                 </Box>
 
                 {/* Stock info */}
-                <Box sx={{ display: 'flex', gap: { xs: 2, sm: 4 }, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 800, color: health.color }}>{item.stock} pcs</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Minimum</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Minimum</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>{item.min} pcs</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shortage</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shortage</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 800, color: 'error.main' }}>−{item.shortage} pcs</Typography>
                   </Box>
-                  <Box sx={{ flex: 1, minWidth: 140 }}>
+                  <Box sx={{ flex: 1, minWidth: 120 }}>
                     <LinearProgress
                       variant="determinate"
                       value={Math.min(pct, 100)}
@@ -238,24 +211,22 @@ const LowStock = () => {
                   <Button
                     variant="contained"
                     size="small"
-                    color="success"
-                    startIcon={<WhatsAppIcon sx={{ fontSize: '15px !important' }} />}
+                    startIcon={<WhatsAppIcon />}
                     onClick={() => openRequest(item)}
-                    sx={{ fontWeight: 800, borderRadius: '6px', fontSize: '0.78rem' }}
+                    sx={{ fontWeight: 700, borderRadius: 2, textTransform: 'none', bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
                   >
                     Request Stock
                   </Button>
                   <Button
                     variant="outlined"
                     size="small"
-                    startIcon={<ViewIcon sx={{ fontSize: '15px !important' }} />}
                     onClick={() => navigate(`/sarees/${item.saree.id}`)}
-                    sx={{ fontWeight: 700, borderRadius: '6px', fontSize: '0.78rem' }}
+                    sx={{ fontWeight: 600, borderRadius: 2, textTransform: 'none' }}
                   >
-                    View Product
+                    View Details
                   </Button>
                 </Box>
-              </Box>
+              </Paper>
             );
           })}
         </Box>

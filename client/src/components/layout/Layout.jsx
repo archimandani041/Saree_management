@@ -1,10 +1,8 @@
 /**
  * Layout Component
  * Unifies Sidebar, Header, Global Search, and Content Area
- * with smooth page transition animation.
  */
 import { Box, useTheme, useMediaQuery } from '@mui/material';
-import { useLocation } from 'react-router-dom';
 import Sidebar, { DRAWER_WIDTH } from './Sidebar';
 import Header from './Header';
 import GlobalSearchDialog from '../common/GlobalSearchDialog';
@@ -14,7 +12,6 @@ import { APP_BACKGROUND } from '../../theme/theme';
 const Layout = ({ children }) => {
   const { sidebarOpen, themeMode } = useApp();
   const theme = useTheme();
-  const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isLight = themeMode === 'light';
 
@@ -40,7 +37,8 @@ const Layout = ({ children }) => {
           easing: theme.transitions.easing.sharp,
           duration: theme.transitions.duration.leavingScreen,
         }),
-        width: sidebarOpen && !isMobile ? `calc(100% - ${DRAWER_WIDTH}px)` : '100%',
+        ml: sidebarOpen && !isMobile ? 0 : 0, // Since we use persistent drawer, margin offset is handled automatically
+        width: sidebarOpen && !isMobile ? `calc(100% - ${DRAWER_WIDTH}px)` : '100%'
       }}>
         {/* Header bar */}
         <Header />
@@ -48,20 +46,14 @@ const Layout = ({ children }) => {
         {/* Global Search Dialog */}
         <GlobalSearchDialog />
 
-        {/* Dynamic Page Content — with fade-in animation per route */}
+        {/* Dynamic Page Content */}
         <Box
-          key={location.pathname}
           component="main"
           sx={{
             flexGrow: 1,
             p: { xs: 2, sm: 3 },
             overflowY: 'auto',
-            bgcolor: 'transparent',
-            animation: 'fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-            '@keyframes fadeInUp': {
-              from: { opacity: 0, transform: 'translateY(10px)' },
-              to:   { opacity: 1, transform: 'translateY(0)' },
-            },
+            bgcolor: 'transparent'
           }}
         >
           {children}
