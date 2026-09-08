@@ -1,7 +1,8 @@
 /**
  * Main App Router Component
- * Connects Contexts, Custom MUI Theme, React Router, Layout, and Pages
+ * Connects Contexts, Custom MUI Theme + Tailwind, React Router, Layout, and Pages
  */
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -12,6 +13,7 @@ import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Pages
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import SetNewPassword from './pages/SetNewPassword';
@@ -29,11 +31,22 @@ const AppContent = () => {
   const { themeMode } = useApp();
   const theme = getTheme(themeMode);
 
+  // Sync Tailwind dark mode class with MUI theme mode
+  useEffect(() => {
+    const html = document.documentElement;
+    if (themeMode === 'dark') {
+      html.classList.add('dark');
+    } else {
+      html.classList.remove('dark');
+    }
+  }, [themeMode]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Routes>
         {/* Public Routes */}
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         {/* Email verification callback — must be public and match the Supabase redirect URL */}
         <Route path="/auth/callback" element={<AuthCallback />} />
