@@ -1,4 +1,4 @@
-﻿/**
+/**
  * LandingPage.jsx
  * Public landing page for KP Creation — shown to all visitors before login.
  * Features animated saree fabric elements, luxury design tokens, and CTA buttons.
@@ -80,6 +80,70 @@ const STYLES = `
     to   { opacity:1; transform:translateY(0); }
   }
 
+  /* Saree image float + gentle sway */
+  @keyframes sareeFloat {
+    0%   { transform: translateY(0px) rotate(-1.5deg) scale(1); }
+    20%  { transform: translateY(-18px) rotate(0deg) scale(1.01); }
+    45%  { transform: translateY(-28px) rotate(1.5deg) scale(1.02); }
+    70%  { transform: translateY(-12px) rotate(-0.5deg) scale(1.005); }
+    100% { transform: translateY(0px) rotate(-1.5deg) scale(1); }
+  }
+  /* Shimmer sweep across saree */
+  @keyframes sareeShimmer {
+    0%   { opacity:0; left:-15%; }
+    30%  { opacity:1; }
+    100% { opacity:0; left:110%; }
+  }
+  /* Glow halo breathe */
+  @keyframes sareeGlow {
+    0%, 100% { opacity:0.4; transform:scale(1); }
+    50%       { opacity:0.75; transform:scale(1.08); }
+  }
+  /* Entrance slide from right */
+  @keyframes sareeEntrance {
+    from { opacity:0; transform:translateX(80px) rotate(2deg) scale(0.95); }
+    to   { opacity:1; transform:translateX(0) rotate(-1.5deg) scale(1); }
+  }
+
+  .lp-saree-wrap {
+    position:absolute; right:0; top:0; bottom:0; width:46%;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; overflow:hidden;
+  }
+  .lp-saree-glow {
+    position:absolute;
+    width:520px; height:700px;
+    border-radius:50%;
+    background:radial-gradient(ellipse,rgba(139,26,58,0.55) 0%,rgba(212,175,55,0.1) 45%,transparent 70%);
+    animation:sareeGlow 5s ease-in-out infinite;
+    filter:blur(30px);
+  }
+  .lp-saree-img-wrap {
+    position:relative;
+    animation: sareeEntrance 1.2s cubic-bezier(0.22,1,0.36,1) 0.3s both,
+               sareeFloat 8s ease-in-out 1.5s infinite;
+  }
+  .lp-saree-img {
+    width:clamp(300px,34vw,500px);
+    height:auto;
+    object-fit:contain;
+    border-radius:12px;
+    filter:drop-shadow(0 30px 60px rgba(139,26,58,0.7)) drop-shadow(0 0 40px rgba(212,175,55,0.25));
+    mask-image:linear-gradient(to bottom,transparent 0%,black 8%,black 88%,transparent 100%);
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 8%,black 88%,transparent 100%);
+  }
+  .lp-saree-shimmer {
+    position:absolute; top:0; bottom:0; width:80px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);
+    animation:sareeShimmer 4s ease-in-out 2s infinite;
+    pointer-events:none; border-radius:12px;
+  }
+  .lp-saree-frame {
+    position:absolute; inset:-2px; border-radius:14px;
+    background:linear-gradient(135deg,rgba(212,175,55,0.3),transparent 40%,rgba(212,175,55,0.15) 80%,transparent);
+    pointer-events:none;
+  }
+
   .lp-root {
     font-family: "Plus Jakarta Sans", system-ui, sans-serif;
     background: #1A0810;
@@ -144,24 +208,26 @@ const SareeBorderSVG = () => (
   </svg>
 );
 
-const SilkFabricSVG = () => (
-  <svg viewBox="0 0 300 600" xmlns="http://www.w3.org/2000/svg"
-    style={{ position:"absolute", right:"6%", top:"-5%", width:"300px", height:"640px", opacity:0.2, pointerEvents:"none" }}>
-    <defs>
-      <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#C2185B" />
-        <stop offset="30%" stopColor="#D4AF37" />
-        <stop offset="60%" stopColor="#8B1A3A" />
-        <stop offset="100%" stopColor="#5C0E2A" />
-      </linearGradient>
-      <filter id="sb"><feGaussianBlur stdDeviation="3"/></filter>
-    </defs>
-    <path d="M50,0 Q120,100 80,200 Q40,300 100,400 Q160,500 120,600" stroke="url(#sg)" strokeWidth="60" fill="none" strokeLinecap="round" filter="url(#sb)" />
-    <path d="M150,0 Q180,120 160,240 Q140,360 180,480 Q200,540 190,600" stroke="url(#sg)" strokeWidth="40" fill="none" strokeLinecap="round" filter="url(#sb)" opacity="0.7" />
-    <line x1="240" y1="0" x2="250" y2="600" stroke="#D4AF37" strokeWidth="1" opacity="0.5" />
-    <line x1="260" y1="0" x2="270" y2="600" stroke="#D4AF37" strokeWidth="0.5" opacity="0.3" />
-  </svg>
+const SareeImage = () => (
+  <div className="lp-saree-wrap" style={{ zIndex: 6 }}>
+    {/* Glowing halo behind image */}
+    <div className="lp-saree-glow" />
+    {/* Image wrapper that floats & sways */}
+    <div className="lp-saree-img-wrap">
+      {/* Gold frame overlay */}
+      <div className="lp-saree-frame" />
+      {/* The saree photo */}
+      <img
+        src="/saree-hero.jpg"
+        alt="KP Creation Handloom Saree"
+        className="lp-saree-img"
+      />
+      {/* Silk shimmer sweep */}
+      <div className="lp-saree-shimmer" />
+    </div>
+  </div>
 );
+
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -204,10 +270,8 @@ export default function LandingPage() {
       <div className="lp-drape lp-drape-3" style={{ zIndex:2 }} />
       <div className="lp-drape lp-drape-4" style={{ zIndex:2 }} />
 
-      {/* SVG fabric */}
-      <div style={{ position:"absolute", inset:0, zIndex:3 }}>
-        <SilkFabricSVG />
-      </div>
+      {/* Real saree photo with float + shimmer + glow animations */}
+      <SareeImage />
 
       {/* Zari accent lines */}
       {[
