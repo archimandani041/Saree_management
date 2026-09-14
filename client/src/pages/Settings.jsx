@@ -1,14 +1,26 @@
 /**
- * Settings Page
- * Application settings management (Admin only)
+ * Settings Page — Redesigned with shadcn/ui & Tailwind CSS
+ * Application parameters, branding preferences, and default stock thresholds.
  */
 import { useState, useEffect } from 'react';
 import { settingsAPI } from '../services/api';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Skeleton } from '../components/ui/skeleton';
+import { cn } from '../lib/utils';
 import {
-  Box, Paper, TextField, Button, Typography, Grid, Alert, CircularProgress,
-  FormControl, InputLabel, Select, MenuItem
-} from '@mui/material';
-import { Save } from '@mui/icons-material';
+  Settings as SettingsIcon,
+  Building2,
+  Image,
+  SunMoon,
+  Boxes,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  Save
+} from 'lucide-react';
 
 const Settings = () => {
   const [companyName, setCompanyName] = useState('');
@@ -65,80 +77,147 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-80 w-full rounded-2xl" />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 650 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
-          System Settings
-        </Typography>
-        <Typography variant="subtitle1">
-          Configure company details, branding metadata, and default thresholds
-        </Typography>
-      </Box>
+    <div className="max-w-2xl mx-auto space-y-6 pb-12">
+      {/* Header */}
+      <div className="pb-2 border-b border-border">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-burgundy-900/10 text-burgundy-900 dark:text-burgundy-300">
+            <SettingsIcon className="w-5 h-5" />
+          </div>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            System Preferences
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure shop branding, portal defaults, and warehouse safety threshold buffers.
+        </p>
+      </div>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
+      {error && (
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <Paper sx={{ p: 4, borderRadius: 4 }} component="form" onSubmit={handleSubmit}>
-        <Grid container spacing={3}>
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Company/Shop Name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              required
-            />
-          </Grid>
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Logo Image URL"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://example.com/logo.png"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth>
-              <InputLabel>Default UI Theme</InputLabel>
-              <Select value={themeMode} label="Default UI Theme" onChange={(e) => setThemeMode(e.target.value)}>
-                <MenuItem value="light">Light Mode</MenuItem>
-                <MenuItem value="dark">Dark Mode</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Default Minimum Stock Level"
-              value={defaultMinStock}
-              onChange={(e) => setDefaultMinStock(parseInt(e.target.value) || 0)}
-              required
-            />
-          </Grid>
-          <Grid size={12}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              startIcon={<Save />}
-              disabled={saving}
-              sx={{ py: 1.2, mt: 1 }}
-            >
-              {saving ? 'Saving changes...' : 'Save Settings'}
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Box>
+      {success && (
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs">
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      <Card className="border border-border shadow-luxury">
+        <CardHeader className="p-6 pb-4">
+          <CardTitle className="text-lg font-serif">Enterprise Profile</CardTitle>
+          <CardDescription className="text-xs">
+            Global configuration applied to invoices, WhatsApp dispatches, and reports.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-6 pt-0">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="companyName" className="text-xs font-semibold">
+                Shop / Firm Trading Name *
+              </Label>
+              <div className="relative">
+                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="companyName"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="logoUrl" className="text-xs font-semibold">
+                Brand Logo Asset URL
+              </Label>
+              <div className="relative">
+                <Image className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="logoUrl"
+                  placeholder="https://your-domain.com/logo.png"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="themeMode" className="text-xs font-semibold">
+                  Default Color Theme
+                </Label>
+                <div className="relative">
+                  <SunMoon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <select
+                    id="themeMode"
+                    value={themeMode}
+                    onChange={(e) => setThemeMode(e.target.value)}
+                    className="w-full h-10 pl-10 pr-3 rounded-lg border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="minStock" className="text-xs font-semibold">
+                  Default Minimum Buffer (Pieces) *
+                </Label>
+                <div className="relative">
+                  <Boxes className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="minStock"
+                    type="number"
+                    value={defaultMinStock}
+                    onChange={(e) => setDefaultMinStock(parseInt(e.target.value, 10) || 0)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/80 flex justify-end">
+              <Button
+                type="submit"
+                variant="luxury"
+                disabled={saving}
+                className="h-10 px-6 text-xs font-bold shadow-luxury"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving Changes...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-1.5" />
+                    Save Preferences
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

@@ -1,49 +1,56 @@
 /**
- * Header/Navbar Component
- * Redesigned to match the requested header layout:
- * - Elongated search pill
- * - Outlined notifications with dot badge
- * - Moon (dark mode) toggle icon
- * - Vertical divider line
- * - User name + uppercase role text aligned next to the maroon-bordered avatar.
+ * Header/Navbar Component — Redesigned with shadcn/ui & Tailwind CSS
+ * Features:
+ * - Search bar pill with Ctrl+K shortcut trigger
+ * - Notification bell with live badge and styled dropdown
+ * - Dark mode toggle
+ * - Profile avatar and quick dropdown menu
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
 import { dashboardAPI } from '../../services/api';
-import {
-  AppBar, Toolbar, IconButton, Badge, Box, Menu, MenuItem,
-  Typography, Avatar, Divider, ListItemText, ListItemIcon, Tooltip, useTheme
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import SearchIcon from '@mui/icons-material/Search';
-import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
-import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
-import AccountCircle from '@mui/icons-material/AccountCircle';
-import LogoutIcon from '@mui/icons-material/Logout';
-import WarningIcon from '@mui/icons-material/WarningAmber';
-import ErrorIcon from '@mui/icons-material/Error';
 import { useKeyboardShortcut } from '../../hooks/useDebounce';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import {
+  Menu,
+  Search,
+  Bell,
+  Sun,
+  Moon,
+  LogOut,
+  Settings,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  User as UserIcon,
+} from 'lucide-react';
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { sidebarOpen, setSidebarOpen, setSearchOpen, toggleTheme } = useApp();
+  const { sidebarOpen, setSidebarOpen, setSearchOpen, themeMode, toggleTheme } = useApp();
   const navigate = useNavigate();
-  const theme = useTheme();
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [notiAnchorEl, setNotiAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
-  // Fetch low stock notifications for the dashboard dropdown
+  // Fetch low stock notifications for dropdown
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const { data } = await dashboardAPI.get();
         const alerts = [];
 
-        // Low stock alerts
         if (data.lowStockSarees && data.lowStockSarees.length > 0) {
           data.lowStockSarees.forEach(s => {
             alerts.push({
@@ -63,7 +70,7 @@ const Header = () => {
 
     if (user) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 30000); // 30s refresh
+      const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -73,238 +80,199 @@ const Header = () => {
     setSearchOpen(true);
   });
 
-  const handleProfileMenuOpen = (event) => setAnchorEl(event.currentTarget);
-  const handleProfileMenuClose = () => setAnchorEl(null);
-
-  const handleNotiMenuOpen = (event) => setNotiAnchorEl(event.currentTarget);
-  const handleNotiMenuClose = () => setNotiAnchorEl(null);
-
   const handleLogout = async () => {
-    handleProfileMenuClose();
     await logout();
     navigate('/login');
   };
 
   const handleNotificationClick = (sareeId) => {
-    handleNotiMenuClose();
     navigate(`/sarees/${sareeId}`);
   };
 
-  const isLight = theme.palette.mode === 'light';
-
   return (
-    <AppBar position="sticky" sx={{
-      bgcolor: 'background.paper',
-      color: 'text.primary',
-      boxShadow: 'none',
-      borderBottom: '1px solid',
-      borderColor: 'divider',
-      zIndex: theme.zIndex.drawer + 1
-    }}>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', px: 3, minHeight: 64 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        {/* Menu Toggle for all screens */}
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="open drawer"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <MenuIcon />
-          </IconButton>
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-card/85 px-4 sm:px-6 backdrop-blur-md">
+      {/* Left Area: Hamburger & Search Pill */}
+      <div className="flex items-center gap-3 md:gap-4 flex-1 max-w-xl">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
 
-          {/* Search Trigger Bar — styled as pill input from the image */}
-          <Box
-            component="button"
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            aria-label="Open global search"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              bgcolor: isLight ? '#FAF8F5' : 'rgba(255, 255, 255, 0.04)',
-              borderRadius: '99px',
-              px: 2.5,
-              py: 0.9,
-              width: { xs: 180, sm: 380, md: 450 },
-              cursor: 'pointer',
-              border: '1px solid #EAE6E1',
-              transition: 'all 0.15s ease',
-              font: 'inherit',
-              color: 'text.primary',
-              textAlign: 'left',
-              appearance: 'none',
-              '&:hover': {
-                bgcolor: isLight ? '#F5F2EC' : 'rgba(255, 255, 255, 0.06)',
-                borderColor: '#DFD9D0'
-              }
-            }}
-          >
-            <SearchIcon sx={{ color: 'text.secondary', mr: 1.5, fontSize: 18 }} />
-            <Typography
-              component="span"
-              sx={{
-                fontSize: '0.82rem',
-                flex: 1,
-                color: '#7C726A',
-                fontWeight: 500,
-                pointerEvents: 'none',
-                userSelect: 'none'
-              }}
-            >
-              Search orders, SKU, or fabrics...
-            </Typography>
-            <Typography component="span" variant="caption" sx={{
-              display: { xs: 'none', sm: 'inline-block' },
-              bgcolor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.08)',
-              px: 1,
-              py: 0.2,
-              borderRadius: 1.5,
-              fontWeight: 700,
-              fontSize: '0.62rem',
-              color: 'text.secondary'
-            }}>
-              Ctrl + K
-            </Typography>
-          </Box>
-        </Box>
+        {/* Search Bar Pill Trigger */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="flex items-center gap-3 w-full max-w-md h-10 px-3.5 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/70 hover:border-burgundy-900/30 text-muted-foreground text-sm transition-all duration-200 shadow-xs group"
+        >
+          <Search className="w-4 h-4 text-muted-foreground group-hover:text-burgundy-900 dark:group-hover:text-burgundy-400 transition-colors" />
+          <span className="flex-1 text-left text-xs sm:text-sm font-medium truncate">
+            Search sarees, series code, fabrics...
+          </span>
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground bg-background border border-border rounded-md shadow-xs">
+            Ctrl K
+          </kbd>
+        </button>
+      </div>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {/* Notifications Dropdown */}
-          <IconButton onClick={handleNotiMenuOpen} sx={{ color: 'text.primary' }}>
-            <Badge
-              badgeContent={notifications.length}
-              color="error"
-              variant="dot"
-              sx={{ '& .MuiBadge-badge': { width: 8, height: 8, minWidth: 8 } }}
-            >
-              <NotificationsNoneOutlinedIcon sx={{ fontSize: 22 }} />
-            </Badge>
-          </IconButton>
-
-          {/* Dark Mode Icon */}
-          <IconButton onClick={toggleTheme} sx={{ color: 'text.primary' }}>
-            <DarkModeOutlinedIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-
-          {/* Vertical Divider */}
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 28, alignSelf: 'center', borderColor: '#EAE6E1' }} />
-
-          {/* User Info & Avatar Circle */}
-          <Box
-            onClick={handleProfileMenuOpen}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              cursor: 'pointer',
-              '&:hover': { opacity: 0.85 }
-            }}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'text.primary', lineHeight: 1.2 }}>
-                {user?.full_name || 'Admin Portal'}
-              </Typography>
-              <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
-                {user?.role?.toUpperCase() || 'ADMINISTRATOR'}
-              </Typography>
-            </Box>
-
-            <Avatar
-              sx={{
-                width: 36,
-                height: 36,
-                bgcolor: 'primary.main',
-                fontSize: '0.85rem',
-                border: '1.5px solid',
-                borderColor: '#3B111A'
-              }}
-            >
-              {user?.full_name?.charAt(0) || 'A'}
-            </Avatar>
-          </Box>
-        </Box>
-      </Toolbar>
-
-      {/* Notifications Menu */}
-      <Menu
-        anchorEl={notiAnchorEl}
-        open={Boolean(notiAnchorEl)}
-        onClose={handleNotiMenuClose}
-        slotProps={{
-          paper: { sx: { width: 320, maxHeight: 400, mt: 1, borderRadius: 3, boxShadow: 3 } }
-        }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Notifications</Typography>
-          {notifications.length > 0 && (
-            <Typography variant="caption" color="error.main" sx={{ fontWeight: 600 }}>
-              {notifications.length} Alerts
-            </Typography>
+      {/* Right Area: Theme Toggle, Notifications, User Menu */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={toggleTheme}
+          title={themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          {themeMode === 'dark' ? (
+            <Sun className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Moon className="w-4 h-4" />
           )}
-        </Box>
-        <Divider />
-        {notifications.length === 0 ? (
-          <MenuItem disabled sx={{ py: 3, justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary">All systems healthy. No alerts.</Typography>
-          </MenuItem>
-        ) : (
-          notifications.map((noti) => (
-            <MenuItem
-              key={noti.id}
-              onClick={() => handleNotificationClick(noti.id)}
-              sx={{ py: 1.5, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}
-            >
-              <ListItemIcon>
-                {noti.type === 'out' ? (
-                  <ErrorIcon color="error" />
-                ) : (
-                  <WarningIcon color="warning" />
-                )}
-              </ListItemIcon>
-              <ListItemText
-                primary={noti.title}
-                secondary={noti.message}
-                slotProps={{
-                  primary: { fontSize: '0.82rem', fontWeight: 700, color: noti.type === 'out' ? 'error.main' : 'warning.main' },
-                  secondary: { fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'normal' }
-                }}
-              />
-            </MenuItem>
-          ))
-        )}
-      </Menu>
+        </Button>
 
-      {/* User Account Menu Dropdown */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleProfileMenuClose}
-        slotProps={{
-          paper: { sx: { width: 220, mt: 1, borderRadius: 3, boxShadow: 3 } }
-        }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Box sx={{ px: 2, py: 1.5 }}>
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>{user?.full_name}</Typography>
-          <Typography variant="caption" color="text.secondary" noWrap display="block">
-            {user?.email || `@${user?.username}`}
-          </Typography>
-        </Box>
-        <Divider />
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon><AccountCircle fontSize="small" /></ListItemIcon>
-          <Typography variant="body2">My Settings</Typography>
-        </MenuItem>
-        <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-          <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>Logout</Typography>
-        </MenuItem>
-      </Menu>
-    </AppBar>
+        {/* Notifications Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="relative text-muted-foreground hover:text-foreground"
+              aria-label="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {notifications.length > 0 && (
+                <span className="absolute top-2 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-80 p-0 shadow-luxury-lg">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <span className="text-sm font-bold text-foreground">Alerts & Notifications</span>
+              {notifications.length > 0 ? (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                  {notifications.length} low stock
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  Healthy
+                </Badge>
+              )}
+            </div>
+
+            <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+                  <p className="text-xs font-medium">All stock levels are healthy.</p>
+                </div>
+              ) : (
+                notifications.map((noti) => (
+                  <button
+                    key={noti.id}
+                    onClick={() => handleNotificationClick(noti.id)}
+                    className="w-full flex items-start gap-3 p-3 hover:bg-muted/60 transition-colors text-left"
+                  >
+                    <div className="p-1.5 rounded-lg bg-destructive/10 text-destructive mt-0.5 shrink-0">
+                      {noti.type === 'out' ? (
+                        <AlertCircle className="w-4 h-4" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      )}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-bold text-foreground leading-tight">
+                        {noti.title}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                        {noti.message}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/80 mt-1">
+                        {noti.time}
+                      </span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {notifications.length > 0 && (
+              <div className="p-2 border-t border-border bg-muted/20">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-burgundy-900 dark:text-burgundy-300 font-bold"
+                  onClick={() => navigate('/low-stock')}
+                >
+                  View All Low Stock Items
+                </Button>
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="h-6 w-[1px] bg-border mx-1" />
+
+        {/* User Profile Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2.5 p-1 rounded-full hover:bg-muted/60 transition-colors text-left focus:outline-hidden">
+              <div className="hidden md:flex flex-col items-end leading-tight">
+                <span className="text-xs font-bold text-foreground max-w-[120px] truncate">
+                  {user?.full_name || 'Admin User'}
+                </span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {user?.role || 'Staff'}
+                </span>
+              </div>
+              <Avatar className="w-8 h-8 ring-2 ring-burgundy-900/20">
+                <AvatarFallback className="bg-burgundy-900 text-white text-xs font-bold">
+                  {user?.full_name?.charAt(0) || 'A'}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-56 shadow-luxury-lg">
+            <DropdownMenuLabel className="font-normal p-3 pb-2">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-bold text-foreground leading-none">
+                  {user?.full_name}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground truncate">
+                  {user?.email || `@${user?.username}`}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => navigate('/settings')}
+              className="cursor-pointer gap-2 py-2"
+            >
+              <Settings className="w-4 h-4 text-muted-foreground" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="cursor-pointer gap-2 py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
   );
 };
 
