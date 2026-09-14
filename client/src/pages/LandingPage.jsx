@@ -781,7 +781,7 @@ export default function LandingPage() {
       navigate('/login?mode=signup');
     }
   };
-  const goDashboard = () => navigate('/sarees');
+  const goDashboard = () => navigate('/dashboard');
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);

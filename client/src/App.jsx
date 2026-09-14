@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { getTheme } from './theme/theme';
 import Layout from './components/layout/Layout';
@@ -27,6 +27,17 @@ import StockHistory from './pages/StockHistory';
 import Settings from './pages/Settings';
 import StockRequests from './pages/StockRequests';
 
+/**
+ * RootRoute:
+ * Displays LandingPage for new/unauthenticated visitors.
+ * Automatically routes authenticated users directly to /dashboard.
+ */
+const RootRoute = () => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+};
+
 const AppContent = () => {
   const { themeMode } = useApp();
   const theme = getTheme(themeMode);
@@ -46,7 +57,7 @@ const AppContent = () => {
       <CssBaseline />
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<RootRoute />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         {/* Email verification callback — must be public and match the Supabase redirect URL */}
@@ -62,7 +73,8 @@ const AppContent = () => {
               <Layout>
                 <Routes>
                   {/* Shared Dashboard */}
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
                   {/* Saree Inventory Grid */}
                   <Route path="/sarees" element={<AllSarees />} />
@@ -100,7 +112,7 @@ const AppContent = () => {
                   />
 
                   {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

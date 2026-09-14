@@ -33,7 +33,7 @@ const navSections = [
   {
     heading: 'Main',
     items: [
-      { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+      { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
       { label: 'All Sarees', path: '/sarees', icon: Shirt },
     ],
   },
@@ -65,6 +65,9 @@ const Sidebar = () => {
   };
 
   const isItemActive = (path) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard' || location.pathname === '/';
+    }
     if (path === '/sarees') {
       return (
         location.pathname === '/sarees' ||
@@ -72,7 +75,7 @@ const Sidebar = () => {
         location.pathname.startsWith('/sarees/edit')
       );
     }
-    return location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+    return location.pathname === path || (path !== '/' && path !== '/dashboard' && location.pathname.startsWith(path));
   };
 
   return (

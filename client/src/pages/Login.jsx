@@ -3,7 +3,7 @@
  * Editorial Luxury Design: Split-screen visual showcase, smooth slider, refined typography.
  */
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import { supabase } from '../services/supabase';
@@ -50,15 +50,17 @@ const Login = () => {
   const { login, signUp, isAuthenticated } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/sarees', { replace: true });
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, from]);
 
   // Mode toggles
   const [isSignUp, setIsSignUp] = useState(false);
@@ -101,7 +103,7 @@ const Login = () => {
       await login(email.trim(), password);
       setThemeMode('light');
       localStorage.setItem('sari_theme', 'light');
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       console.error(err);
       if (err.message?.toLowerCase().includes('invalid') || err.message?.toLowerCase().includes('credentials')) {
@@ -166,7 +168,7 @@ const Login = () => {
         setTermsAccepted(false);
         setIsSignUp(false);
       } else {
-        navigate('/');
+        navigate(from, { replace: true });
       }
     } catch (err) {
       console.error(err);
