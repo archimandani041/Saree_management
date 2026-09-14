@@ -46,6 +46,7 @@ const AppContent = () => {
       <CssBaseline />
       <Routes>
         {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         {/* Email verification callback — must be public and match the Supabase redirect URL */}
