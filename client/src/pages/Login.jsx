@@ -41,11 +41,17 @@ const SLIDES = [
 ];
 
 const Login = () => {
-  const { login, signUp } = useAuth();
+  const { login, signUp, isAuthenticated } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // State toggles
   const [isSignUp, setIsSignUp] = useState(false);
@@ -321,40 +327,38 @@ const Login = () => {
           overflowY: 'auto'
         }}>
           {/* Header */}
-          <Box sx={{ mb: 3.5 }}>
-            <Typography variant="h2" sx={{
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Typography variant="h1" sx={{
               fontFamily: '"Playfair Display", Georgia, serif',
-              color: '#322D29',
-              fontWeight: 800,
-              fontSize: '1.85rem',
-              mb: 1,
-              letterSpacing: '-0.02em'
+              color: '#322D29', fontWeight: 900, fontSize: '2.2rem',
+              mb: 1, letterSpacing: '-0.02em'
             }}>
-              {isSignUp ? 'Create an account' : 'Welcome back'}
+              {isForgotPassword ? 'Reset Password' : (isSignUp ? 'Create an account' : 'Welcome back')}
             </Typography>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="body2" sx={{ color: '#AC9C8D', fontSize: '0.85rem' }}>
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ color: '#8C827A', fontSize: '0.85rem' }}>
+                {isForgotPassword ? 'Enter your email to receive a reset link.' : (isSignUp ? 'Already have an account?' : "Don't have an account?")}
               </Typography>
-              <Typography
-                variant="body2"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError('');
-                  setSuccess('');
-                }}
-                sx={{
-                  color: '#72383D',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  '&:hover': { color: '#592B2F' }
-                }}
-              >
-                {isSignUp ? 'Log in' : 'Sign up'}
-              </Typography>
+              {!isForgotPassword && (
+                <Typography
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setIsForgotPassword(false);
+                    setError('');
+                    setSuccess('');
+                  }}
+                  sx={{
+                    color: '#72383D',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    '&:hover': { color: '#592B2F' }
+                  }}
+                >
+                  {isSignUp ? 'Log in' : 'Sign up'}
+                </Typography>
+              )}
             </Box>
           </Box>
 
@@ -426,39 +430,41 @@ const Login = () => {
             />
 
             {/* Password Field */}
-            <TextField
-              placeholder="Enter your password"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
-              fullWidth
-              className="custom-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        sx={{ color: '#AC9C8D' }}
-                      >
-                        {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
+            {!isForgotPassword && (
+              <TextField
+                placeholder="Enter your password"
+                type={showPassword ? 'text' : 'password'}
+                variant="outlined"
+                fullWidth
+                className="custom-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          sx={{ color: '#AC9C8D' }}
+                        >
+                          {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            )}
 
             {/* Forgot Password link — only show on login view */}
-            {!isSignUp && (
+            {!isSignUp && !isForgotPassword && (
               <Typography
                 onClick={() => {
                   setIsForgotPassword(true);

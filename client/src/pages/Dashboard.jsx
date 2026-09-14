@@ -4,7 +4,7 @@ import { dashboardAPI, sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import {
-  Grid, Paper, Box, Typography, Card, CardContent,
+  Grid, Paper, Box, Typography,
   Table, TableBody, TableCell, TableContainer, TableRow, TableHead,
   Button, useTheme, Skeleton, Chip, MenuItem, Select, FormControl,
   ButtonGroup, Autocomplete, TextField, LinearProgress,
@@ -35,6 +35,8 @@ import {
 } from 'recharts';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import RequestStockDialog from '../components/common/RequestStockDialog';
+import StatCard from '../components/common/StatCard';
+import { DashboardSkeleton } from '../components/common/SkeletonLoader';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -238,39 +240,8 @@ const Dashboard = () => {
   const stockTurnover = stats.currentStock > 0 ? Math.round((stats.delivered / stats.currentStock) * 1000) / 10 : 0;
   const stockDemandRatio = avgDailyDelivery > 0 ? Math.round((stats.currentStock / avgDailyDelivery) * 10) / 10 : 999;
 
-  // Reusable compact KPI card — flat editorial style matching image
-  const KpiCard = ({ label, sublabel, value, unit, icon, tint, trendPercent }) => (
-    <Card sx={{ border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }}>
-      <CardContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1, minHeight: 120 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.68rem' }}>
-            {label}
-          </Typography>
-          <Box sx={{ color: tint, bgcolor: `${tint}18`, p: 0.75, borderRadius: '6px', display: 'flex' }}>
-            {icon}
-          </Box>
-        </Box>
-        {loading && !data ? <Skeleton width="55%" height={40} /> : (
-          <Typography sx={{ fontWeight: 800, fontSize: '2rem', color: 'text.primary', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-            {value}{unit && <Box component="span" sx={{ fontSize: '0.95rem', fontWeight: 500, ml: 0.5, color: 'text.secondary' }}>{unit}</Box>}
-          </Typography>
-        )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minHeight: 20 }}>
-          {typeof trendPercent === 'number' && (
-            <Chip
-              label={`${trendPercent >= 0 ? '↑' : '↓'} ${Math.abs(trendPercent)}%`}
-              color={trendPercent >= 0 ? 'success' : 'error'}
-              size="small"
-              sx={{ height: 18, fontSize: '0.62rem', fontWeight: 800, borderRadius: '4px' }}
-            />
-          )}
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.72rem' }}>
-            {sublabel}
-          </Typography>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+  // KpiCard is now StatCard — keeping this alias for any inline uses
+  const KpiCard = (props) => <StatCard {...props} loading={loading && !data} />;
 
   const statusMeta = {
     live: { label: 'Live', color: theme.palette.success.main },
@@ -279,10 +250,15 @@ const Dashboard = () => {
     disabled: { label: 'Offline', color: theme.palette.text.disabled }
   }[realtimeStatus] || { label: 'Offline', color: theme.palette.text.disabled };
 
+  // Full dashboard skeleton on initial load
+  if (loading && !data) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <Box sx={{ flexGrow: 1, p: { xs: 1.5, md: 3 }, maxWidth: 1500, mx: 'auto', position: 'relative' }}>
       {loading && data && (
-        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
+        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 2, borderRadius: 0 }} color="primary" />
       )}
 
       {/* HEADER */}
@@ -351,20 +327,35 @@ const Dashboard = () => {
           {/* KPI CARDS */}
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Total Sarees" sublabel="Master catalog items" value={(stats.totalSarees ?? 0).toLocaleString()}
-                icon={<SareeIcon />} tint={theme.palette.primary.main} />
+              <StatCard
+                label="Total Sarees" sublabel="Master catalog items"
+                value={(stats.totalSarees ?? 0).toLocaleString()}
+                icon={<SareeIcon />} tint={theme.palette.primary.main}
+                onClick={() => navigate('/sarees')}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Current Stock" sublabel="Total physical units" value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
-                icon={<GridIcon />} tint={theme.palette.secondary.main} />
+              <StatCard
+                label="Current Stock" sublabel="Total physical units"
+                value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
+                icon={<GridIcon />} tint='#7C3AED'
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Delivery Out" sublabel="vs prior period" value={(stats.delivered ?? 0).toLocaleString()} unit="pcs"
-                icon={<DeliveryIcon />} tint={theme.palette.error.main} trendPercent={stats?.comparison?.deliveredPercent ?? 0} />
+              <StatCard
+                label="Delivered Out" sublabel="vs prior period"
+                value={(stats.delivered ?? 0).toLocaleString()} unit="pcs"
+                icon={<DeliveryIcon />} tint={theme.palette.error.main}
+                trendPercent={stats?.comparison?.deliveredPercent ?? 0}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Stock In" sublabel="vs prior period" value={(stats.added ?? 0).toLocaleString()} unit="pcs"
-                icon={<PurchaseIcon />} tint={theme.palette.success.main} trendPercent={stats?.comparison?.addedPercent ?? 0} />
+              <StatCard
+                label="Stock Added" sublabel="vs prior period"
+                value={(stats.added ?? 0).toLocaleString()} unit="pcs"
+                icon={<PurchaseIcon />} tint={theme.palette.success.main}
+                trendPercent={stats?.comparison?.addedPercent ?? 0}
+              />
             </Grid>
           </Grid>
 
@@ -415,29 +406,32 @@ const Dashboard = () => {
             <Grid size={{ xs: 12, md: 8 }}>
               <Paper sx={{ p: 3, height: 400 }} elevation={0}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>Stock In vs Stock Out</Typography>
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary' }}>Stock In vs Delivered Out</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>Movement trend for selected period</Typography>
+                  </Box>
                   <ButtonGroup size="small" variant="outlined" color="primary">
                     <Button variant={grouping === 'daily' ? 'contained' : 'outlined'} onClick={() => setGrouping('daily')}>Daily</Button>
                     <Button variant={grouping === 'weekly' ? 'contained' : 'outlined'} onClick={() => setGrouping('weekly')}>Weekly</Button>
                     <Button variant={grouping === 'monthly' ? 'contained' : 'outlined'} onClick={() => setGrouping('monthly')}>Monthly</Button>
                   </ButtonGroup>
                 </Box>
-                {loading && !data ? (
-                  <Skeleton variant="rectangular" height="75%" sx={{ borderRadius: 2 }} />
-                ) : stockMovement.length === 0 ? (
-                  <Box sx={{ height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography color="text.secondary" sx={{ fontWeight: 600 }}>More stock movement history is needed to generate this trend.</Typography>
+                {stockMovement.length === 0 ? (
+                  <Box sx={{ height: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                    <GridIcon sx={{ fontSize: '2rem', color: 'text.disabled' }} />
+                    <Typography color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.88rem' }}>No movement data for this period</Typography>
+                    <Typography variant="caption" color="text.disabled">Try expanding the date range</Typography>
                   </Box>
                 ) : (
                   <ResponsiveContainer width="100%" height="82%">
-                    <BarChart data={stockMovement} barGap={2} barCategoryGap="30%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-                      <XAxis dataKey="label" stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} axisLine={false} />
-                      <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-                      <Legend verticalAlign="top" height={36} iconType="circle" />
-                      <Bar dataKey="stockAdded" name="Stock Added" fill="#22C55E" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="stockDelivered" name="Stock Delivered" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                    <BarChart data={stockMovement} barGap={4} barCategoryGap="32%">
+                      <CartesianGrid strokeDasharray="2 4" vertical={false} stroke={theme.palette.divider} />
+                      <XAxis dataKey="label" stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
+                      <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: isLight ? 'rgba(59,17,26,0.03)' : 'rgba(255,255,255,0.03)' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} />
+                      <Bar dataKey="stockAdded" name="Stock In" fill="#16A34A" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                      <Bar dataKey="stockDelivered" name="Delivered Out" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={32} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

@@ -11,6 +11,9 @@ import { stockAPI, combinationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import InventoryLedgerDrawer from '../components/common/InventoryLedgerDrawer';
 import RequestStockDialog from '../components/common/RequestStockDialog';
+import PageHeader from '../components/common/PageHeader';
+import EmptyState from '../components/common/EmptyState';
+import { TableSkeleton } from '../components/common/SkeletonLoader';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TablePagination, Typography, FormControl, Select,
@@ -237,68 +240,61 @@ const StockHistory = () => {
     <Box sx={{ p: { xs: 2, md: 3.5 }, maxWidth: 1400, mx: 'auto' }}>
       <Snackbar open={!!snack} autoHideDuration={4000} onClose={() => setSnack('')} message={snack} />
 
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600, fontSize: { xs: '1.6rem', md: '2rem' } }}>
-              Inventory Audit Ledger
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Single source of truth for every sari stock movement, machine delivery, and master edit event.
-            </Typography>
-          </Box>
+      <PageHeader
+        title="Inventory Ledger"
+        subtitle="Complete audit trail of every stock movement, delivery, and edit event"
+        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Stock History' }]}
+        actions={<>
+          <Button
+            variant={viewMode === 'ledger' ? 'contained' : 'outlined'}
+            startIcon={<TableRowsIcon />}
+            onClick={() => setViewMode('ledger')}
+            size="small"
+          >
+            Ledger
+          </Button>
+          <Button
+            variant={viewMode === 'timeline' ? 'contained' : 'outlined'}
+            startIcon={<TimelineIcon />}
+            onClick={() => setViewMode('timeline')}
+            size="small"
+          >
+            Timeline
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={() => handleExport('excel')}
+            size="small"
+          >
+            Export
+          </Button>
+        </>}
+      />
 
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant={viewMode === 'ledger' ? 'contained' : 'outlined'}
-              startIcon={<TableRowsIcon />}
-              onClick={() => setViewMode('ledger')}
-              size="small"
-            >
-              Ledger View
-            </Button>
-            <Button
-              variant={viewMode === 'timeline' ? 'contained' : 'outlined'}
-              startIcon={<TimelineIcon />}
-              onClick={() => setViewMode('timeline')}
-              size="small"
-            >
-              Timeline View
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<FileDownloadIcon />}
-              onClick={() => handleExport('excel')}
-              size="small"
-              sx={{ bgcolor: '#3B111A' }}
-            >
-              Export Ledger
-            </Button>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Top Cards */}
+      {/* Today's Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 4, md: 4 }}>
-          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S STOCK ADDED</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'success.main', mt: 0.5 }}>+{stats.todayStockAdded}</Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 4 }}>
-          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S MACHINE DELIVERY</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main', mt: 0.5 }}>{stats.todayDeliveries}</Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 4 }}>
-          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>TODAY'S DELIVERY</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'error.main', mt: 0.5 }}>-{stats.todayStockDeliveries}</Typography>
-          </Paper>
-        </Grid>
+        {[
+          { label: "Today's Stock In", value: `+${stats.todayStockAdded}`, color: 'success.main' },
+          { label: "Machine Delivery", value: stats.todayDeliveries, color: 'primary.main' },
+          { label: "Stock Delivery", value: `-${stats.todayStockDeliveries}`, color: 'error.main' },
+        ].map((s) => (
+          <Grid key={s.label} size={{ xs: 12, sm: 4 }}>
+            <Box sx={{
+              p: 2.5,
+              bgcolor: 'background.paper',
+              border: '1px solid', borderColor: 'divider',
+              borderRadius: '10px',
+            }}>
+              <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary', mb: 0.75 }}>
+                {s.label}
+              </Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.6rem', color: s.color, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                {s.value}
+              </Typography>
+            </Box>
+          </Grid>
+        ))}
       </Grid>
 
       {/* Filter and Search Bar */}
@@ -332,8 +328,8 @@ const StockHistory = () => {
 
       {/* Audit Table (ERP Ledger View) */}
       {viewMode === 'ledger' ? (
-        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-          {loading && <LinearProgress />}
+        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '10px', overflow: 'hidden' }}>
+          {loading && <LinearProgress sx={{ height: 2 }} />}
           <TableContainer>
             <Table size="small">
               <TableHead sx={{ bgcolor: 'background.default' }}>
@@ -347,10 +343,16 @@ const StockHistory = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {history.length === 0 && !loading ? (
+                {loading && history.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                      <Typography color="text.secondary">No ledger records match your search.</Typography>
+                    <TableCell colSpan={6} sx={{ p: 0 }}>
+                      <TableSkeleton rows={6} cols={6} />
+                    </TableCell>
+                  </TableRow>
+                ) : history.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6}>
+                      <EmptyState variant="no-history" compact />
                     </TableCell>
                   </TableRow>
                 ) : history.map((item) => {
