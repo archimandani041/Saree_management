@@ -47,11 +47,18 @@ const SLIDES = [
 ];
 
 const Login = () => {
-  const { login, signUp } = useAuth();
+  const { login, signUp, isAuthenticated } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/sarees', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Mode toggles
   const [isSignUp, setIsSignUp] = useState(false);

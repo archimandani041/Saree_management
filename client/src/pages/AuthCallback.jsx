@@ -8,7 +8,7 @@
  * Supabase fires onAuthStateChange with the appropriate event so we can
  * branch on PASSWORD_RECOVERY vs SIGNED_IN.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { Box, CircularProgress, Typography, Alert } from '@mui/material';
@@ -19,6 +19,12 @@ const AuthCallback = () => {
   const [status, setStatus] = useState('verifying'); // 'verifying' | 'success' | 'recovery' | 'error'
   const [message, setMessage] = useState('');
 
+  // Use a ref to track the status to prevent stale closure bugs in setTimeout/async loops
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   useEffect(() => {
     if (!supabase) {
       setStatus('error');
@@ -26,15 +32,22 @@ const AuthCallback = () => {
       return;
     }
 
+    let isSubscribed = true;
+
     // onAuthStateChange fires automatically when Supabase processes the URL token
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isSubscribed) return;
+      console.log('AuthCallback: onAuthStateChange event =', event);
+
       if (event === 'PASSWORD_RECOVERY') {
         // User clicked a password-reset link → send them to set a new password
         setStatus('recovery');
         setMessage('Identity confirmed. Redirecting to set your new password…');
         setTimeout(() => {
-          subscription.unsubscribe();
-          navigate('/set-password', { replace: true });
+          if (isSubscribed) {
+            subscription.unsubscribe();
+            navigate('/set-password', { replace: true });
+          }
         }, 1500);
 
       } else if (event === 'SIGNED_IN' && session) {
@@ -42,39 +55,70 @@ const AuthCallback = () => {
         setStatus('success');
         setMessage('Email verified! Redirecting to your dashboard…');
         setTimeout(() => {
-          subscription.unsubscribe();
-          navigate('/', { replace: true });
+          if (isSubscribed) {
+            subscription.unsubscribe();
+            navigate('/', { replace: true });
+          }
         }, 1500);
       }
     });
 
-    // Fallback: if Supabase already exchanged the token before we subscribed,
-    // check the current session directly.
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        subscription.unsubscribe();
-        setStatus('error');
-        setMessage(error.message || 'Verification failed.');
-        return;
-      }
-      // If there's already a session and onAuthStateChange hasn't fired yet
-      // (can happen with PKCE on fast networks), handle it here.
-      if (data?.session && status === 'verifying') {
-        // We don't know the event type here, so leave it to onAuthStateChange.
-        // Just ensure we don't hang indefinitely.
-      }
-    });
+    const handleExchange = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
 
-    // Timeout: if nothing happens in 8s, show a helpful error
+      if (code) {
+        try {
+          console.log('AuthCallback: Exchanging PKCE code for session...');
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } catch (err) {
+          console.error('AuthCallback: PKCE code exchange failed:', err);
+          if (isSubscribed) {
+            setStatus('error');
+            setMessage(err.message || 'Authentication code exchange failed.');
+          }
+        }
+      } else {
+        // Fallback: if Supabase already exchanged the token before we subscribed (Implicit Flow),
+        // check the current session directly.
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) throw error;
+          
+          if (session && statusRef.current === 'verifying') {
+            setStatus('success');
+            setMessage('Logged in successfully! Redirecting…');
+            setTimeout(() => {
+              if (isSubscribed) {
+                subscription.unsubscribe();
+                navigate('/', { replace: true });
+              }
+            }, 1500);
+          }
+        } catch (err) {
+          console.error('AuthCallback: Session check failed:', err);
+          if (isSubscribed) {
+            setStatus('error');
+            setMessage(err.message || 'Session check failed.');
+          }
+        }
+      }
+    };
+
+    handleExchange();
+
+    // Timeout: if nothing happens in 10s, show a helpful error
     const timeout = setTimeout(() => {
-      subscription.unsubscribe();
-      if (status === 'verifying') {
+      if (isSubscribed && statusRef.current === 'verifying') {
+        subscription.unsubscribe();
         setStatus('error');
         setMessage('The link may have expired or already been used. Please request a new one.');
       }
-    }, 8000);
+    }, 10000);
 
     return () => {
+      isSubscribed = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
