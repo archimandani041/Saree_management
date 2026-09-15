@@ -53,7 +53,10 @@ const Login = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
-  const from = location.state?.from?.pathname || '/dashboard';
+  const rawTarget = location.state?.from?.pathname || location.state?.from || '/dashboard';
+  const from = (!rawTarget || rawTarget === '/' || rawTarget === '/landing' || rawTarget === '/login')
+    ? '/dashboard'
+    : rawTarget;
 
   // Redirect if already logged in
   useEffect(() => {
