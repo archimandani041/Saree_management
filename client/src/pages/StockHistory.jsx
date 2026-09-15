@@ -325,7 +325,7 @@ const StockHistory = () => {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Today's Stock Added
+                Total Stock Added
               </span>
               <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
                 +{stats.todayStockAdded} pcs
@@ -341,7 +341,7 @@ const StockHistory = () => {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Today's Machine Deliveries
+                Total Machine Deliveries
               </span>
               <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">
                 {stats.todayDeliveries} pcs
@@ -357,7 +357,7 @@ const StockHistory = () => {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Today's Dispatch Delivery
+                Total Dispatch Delivery
               </span>
               <div className="text-2xl font-bold font-mono text-destructive mt-1">
                 -{stats.todayStockDeliveries} pcs
