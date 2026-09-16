@@ -214,7 +214,6 @@ const SareeForm = () => {
         setPrice(s.price != null ? String(s.price) : '');
         setDescription(s.description || '');
         setImageUrl(s.image_url || '');
-        setStatus(s.status || 'In Stock');
         setBrand(s.brand || 'KP');
 
         let loadedBeams = [];
@@ -623,7 +622,6 @@ const SareeForm = () => {
       if (existSareeCheckQueue.length > 0) {
         setSareeExistQueue(existSareeCheckQueue);
         setActiveSareeExist(existSareeCheckQueue[0]);
-        setPreviewOpen(false); // Close preview to show conflict resolver
         return;
       }
 
@@ -914,9 +912,9 @@ const SareeForm = () => {
                     onChange={e => { setSeriesLetter(e.target.value.toUpperCase()); setSeriesCodeError(false); }} slotProps={{ htmlInput: { maxLength: 2 } }} />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 2 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Brand</InputLabel>
-                    <Select value={brand} label="Brand" onChange={e => setBrand(e.target.value)}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Shop</InputLabel>
+                    <Select value={brand} label="Shop" onChange={e => setBrand(e.target.value)}>
                       <MenuItem value="KP">KP</MenuItem>
                       <MenuItem value="KPR">KPR</MenuItem>
                     </Select>
@@ -1015,6 +1013,7 @@ const SareeForm = () => {
         onClose={() => setPasteOpen(false)}
         onImport={handleWhatsAppImport}
         currentSeriesBase={seriesBase}
+        currentBrand={brand}
       />
 
       {/* Duplicate Resolution Dialog */}

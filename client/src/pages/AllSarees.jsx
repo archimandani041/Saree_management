@@ -551,9 +551,9 @@ const AllSarees = () => {
               onChange={(e) => setBrandFilter(e.target.value)}
               className="h-9 px-2.5 rounded-lg border border-input bg-background text-xs font-medium text-foreground focus:ring-2 focus:ring-ring"
             >
-              <option value="">Brand: All Brands</option>
-              <option value="KP">KP Creation</option>
-              <option value="KPR">KPR Premium</option>
+              <option value="">Shop: All (KP + KPR)</option>
+              <option value="KP">KP</option>
+              <option value="KPR">KPR</option>
             </select>
 
             <Input
@@ -804,7 +804,7 @@ const AllSarees = () => {
 
                                     <div className="space-y-2.5">
                                       {beam.combinations?.map((combo) => {
-                                        const isHighlighted = combo.id === highlightComboId;
+                                        const isHighlighted = String(combo.id) === String(highlightComboId);
 
                                         return (
                                           <div

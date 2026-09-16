@@ -273,17 +273,25 @@ const createSaree = async (req, res) => {
 
     if (!series_base) return res.status(400).json({ error: 'Series base is required' });
 
+    // Shop (KP/KPR) is a mandatory part of a sari's identity.
+    const shop = (brand || 'KP').toUpperCase();
+    if (!['KP', 'KPR'].includes(shop)) {
+      return res.status(400).json({ error: 'Shop (brand) must be KP or KPR.' });
+    }
+
     const seriesCode = (series_base.trim() + series_letter.trim()).toUpperCase();
 
-    // Check database for duplicate Series Code — scoped to this owner
+    // Check database for duplicate Series Code — scoped to this owner AND this shop,
+    // so the same code can exist independently in KP and KPR.
     const { data: dupSaree } = await supabase
       .from('sarees')
       .select('id')
       .eq('series_code', seriesCode)
       .eq('owner_id', req.user.owner_id)
+      .eq('brand', shop)
       .limit(1);
     if (dupSaree && dupSaree.length > 0) {
-      return res.status(400).json({ error: `Series Code ${seriesCode} already exists.` });
+      return res.status(400).json({ error: `Series Code ${seriesCode} already exists in ${shop}.` });
     }
 
     // Check duplicate beam names locally in request
@@ -320,7 +328,7 @@ const createSaree = async (req, res) => {
         description,
         price: price != null ? parseFloat(price) : null,
         image_url,
-        brand: brand || 'KP',
+        brand: shop,
         owner_id: req.user.owner_id,
         created_by: req.user.id,
         updated_by: req.user.id
@@ -359,7 +367,7 @@ const createSaree = async (req, res) => {
               minimum_stock: parseInt(c.minimum_stock) || 20,
               notes: c.notes || null,
               status: c.status || 'In Stock',
-              brand: c.brand || 'KP',
+              brand: shop, // combinations always inherit the parent sari's shop
               sort_order: ci,
               owner_id: req.user.owner_id
             })
@@ -446,16 +454,28 @@ const updateSaree = async (req, res) => {
     const newLetter = series_letter !== undefined ? series_letter.trim().toUpperCase() : existing.series_letter;
     const newSeriesCode = newBase + newLetter;
 
-    if (newSeriesCode !== existing.series_code) {
+    // Shop (KP/KPR) is part of identity. Validate and resolve the effective shop.
+    let newBrand = existing.brand || 'KP';
+    if (brand !== undefined) {
+      newBrand = (brand || 'KP').toUpperCase();
+      if (!['KP', 'KPR'].includes(newBrand)) {
+        return res.status(400).json({ error: 'Shop (brand) must be KP or KPR.' });
+      }
+    }
+
+    // A duplicate is another sari with the same code IN THE SAME SHOP. Re-check
+    // whenever the code OR the shop changes.
+    if (newSeriesCode !== existing.series_code || newBrand !== (existing.brand || 'KP')) {
       const { data: dupSaree } = await supabase
         .from('sarees')
         .select('id')
         .eq('series_code', newSeriesCode)
         .eq('owner_id', req.user.owner_id)
+        .eq('brand', newBrand)
         .neq('id', id)
         .limit(1);
       if (dupSaree && dupSaree.length > 0) {
-        return res.status(400).json({ error: `Series Code ${newSeriesCode} already exists.` });
+        return res.status(400).json({ error: `Series Code ${newSeriesCode} already exists in ${newBrand}.` });
       }
     }
 
@@ -466,16 +486,25 @@ const updateSaree = async (req, res) => {
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = price != null ? parseFloat(price) : null;
     if (image_url !== undefined) updateData.image_url = image_url;
-    if (brand !== undefined) updateData.brand = brand;
+    if (brand !== undefined) updateData.brand = newBrand;
 
     const { data: saree, error } = await supabase
       .from('sarees').update(updateData).eq('id', id).select().single();
 
     if (error) {
-      if (error.code === '23505') return res.status(400).json({ error: `Series Code ${newSeriesCode} already exists.` });
+      if (error.code === '23505') return res.status(400).json({ error: `Series Code ${newSeriesCode} already exists in ${newBrand}.` });
       throw error;
     }
     if (!saree) return res.status(404).json({ error: 'Saree not found' });
+
+    // Keep combinations' shop in sync with the sari when the shop changes.
+    if (brand !== undefined && newBrand !== (existing.brand || 'KP')) {
+      const { data: sareeBeams } = await supabase.from('beams').select('id').eq('saree_id', id);
+      const beamIds = (sareeBeams || []).map((b) => b.id);
+      if (beamIds.length > 0) {
+        await supabase.from('combinations').update({ brand: newBrand }).in('beam_id', beamIds);
+      }
+    }
 
     await logActivity(req.user, 'UPDATE_SAREE', 'saree', id, { updated_fields: Object.keys(updateData) });
 
@@ -769,10 +798,12 @@ const deleteBeam = async (req, res) => {
 const addCombination = async (req, res) => {
   try {
     const { beamId } = req.params;
-    const { combination_name, current_stock = 0, minimum_stock = 20, notes, colors = [], status = 'In Stock', brand = 'KP' } = req.body;
+    const { combination_name, current_stock = 0, minimum_stock = 20, notes, colors = [], status = 'In Stock' } = req.body;
 
-    const { data: beam } = await supabase.from('beams').select('saree_id, beam_name').eq('id', beamId).eq('owner_id', req.user.owner_id).single();
+    // A combination always inherits its parent sari's shop (KP/KPR) — never the client's.
+    const { data: beam } = await supabase.from('beams').select('saree_id, beam_name, sarees(brand)').eq('id', beamId).eq('owner_id', req.user.owner_id).single();
     if (!beam) return res.status(404).json({ error: 'Beam not found' });
+    const shop = beam.sarees?.brand || 'KP';
 
     // Check duplicate combination names — only enforce when a non-empty name is given.
     // Blank/unnamed combinations have no meaningful name to deduplicate against.
@@ -808,7 +839,7 @@ const addCombination = async (req, res) => {
         minimum_stock: parseInt(minimum_stock),
         notes: notes || null,
         status: status || 'In Stock',
-        brand: brand || 'KP',
+        brand: shop,
         sort_order,
         owner_id: req.user.owner_id
       })
