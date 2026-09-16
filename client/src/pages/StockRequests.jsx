@@ -408,7 +408,12 @@ const StockRequests = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {receiveConfirm && (
+          {receiveConfirm && (() => {
+            const isDeliveryReceive = getMovementLabel(receiveConfirm) === 'Delivery Out';
+            const current = receiveConfirm.current_stock ?? 0;
+            const qty = receiveConfirm.requested_qty;
+            const updatedTotal = isDeliveryReceive ? Math.max(0, current - qty) : current + qty;
+            return (
             <div className="space-y-3 py-2">
               <div className="p-3 rounded-xl bg-muted/40 border border-border space-y-2 text-xs">
                 <div className="font-semibold text-foreground">
@@ -417,31 +422,34 @@ const StockRequests = () => {
                 <div className="flex justify-between text-muted-foreground pt-1 border-t border-border/50">
                   <span>Current Stock</span>
                   <span className="font-mono font-bold text-foreground">
-                    {receiveConfirm.current_stock ?? 0} pcs
+                    {current} pcs
                   </span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Incoming Quantity</span>
-                  <span className="font-mono font-bold text-emerald-600">
-                    +{receiveConfirm.requested_qty} pcs
+                  <span>{isDeliveryReceive ? 'Outgoing Quantity' : 'Incoming Quantity'}</span>
+                  <span className={`font-mono font-bold ${isDeliveryReceive ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {isDeliveryReceive ? '−' : '+'}{qty} pcs
                   </span>
                 </div>
                 <div className="flex justify-between text-foreground font-bold pt-1.5 border-t border-border">
                   <span>Updated Total</span>
                   <span className="font-mono text-sm text-burgundy-900 dark:text-burgundy-300">
-                    {(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs
+                    {updatedTotal} pcs
                   </span>
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setReceiveConfirm(null)}>
               Cancel
             </Button>
             <Button variant="luxury" onClick={confirmReceive}>
-              Confirm & Increment Stock
+              {receiveConfirm && getMovementLabel(receiveConfirm) === 'Delivery Out'
+                ? 'Confirm & Deduct Stock'
+                : 'Confirm & Increment Stock'}
             </Button>
           </DialogFooter>
         </DialogContent>

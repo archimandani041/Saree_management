@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { SnackbarProvider } from 'notistack';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { getTheme } from './theme/theme';
@@ -55,6 +56,7 @@ const AppContent = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<RootRoute />} />
@@ -119,6 +121,7 @@ const AppContent = () => {
           }
         />
       </Routes>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 };

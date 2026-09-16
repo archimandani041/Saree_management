@@ -5,7 +5,13 @@
 const jwt = require('jsonwebtoken');
 const { supabase } = require('../config/supabase');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sari_stock_jwt_secret';
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('FATAL: JWT_SECRET is not set. Refusing to start with an insecure default in production.');
+}
+if (!process.env.JWT_SECRET) {
+  console.warn('[auth] WARNING: JWT_SECRET is not set — using an insecure development-only fallback. Set JWT_SECRET before deploying.');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'sari_stock_jwt_secret_dev_only';
 
 /**
  * Authenticate middleware - verifies Supabase JWT token
@@ -195,6 +201,9 @@ const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Not authenticated.' });
+    }
+    if (roles.length && !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden: insufficient role.' });
     }
     next();
   };

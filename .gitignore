@@ -1,2 +1,5 @@
 .vercel
 .env*
+
+# Local env file (contains secrets — never commit)
+/env
