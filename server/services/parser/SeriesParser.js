@@ -48,7 +48,10 @@ const parse = (line) => {
 
   const combination_name = m[2]?.trim() || null;
 
-  return { series_code: code, series_base, series_letter, combination_name };
+  // matchedText is the exact substring consumed from the line (code + optional
+  // "(combination)"), so callers can strip it and keep parsing the remainder of
+  // a compact single-line entry like "KS526F - F-1 Red".
+  return { series_code: code, series_base, series_letter, combination_name, matchedText: m[0] };
 };
 
 module.exports = { parse };

@@ -71,6 +71,11 @@ const cleanLine = (line) => {
       /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu,
       ''
     )
+    // Normalize unicode dashes (en-dash, em-dash, minus sign, etc.) to a plain hyphen
+    // so separators like "KS526F — F-1 — Red" parse identically to "KS526F - F-1 - Red".
+    .replace(/[‒–—―−]/g, '-')
+    // Normalize fancy bullets/asterisks used for *bold* wrapping into spaces
+    .replace(/[*•·]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 };

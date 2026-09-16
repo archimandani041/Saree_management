@@ -52,18 +52,20 @@ const colorSimilarity = (existingColors = [], incomingColors = []) => {
 /**
  * @returns {{ isDuplicate: boolean, existingId?: string, existingCode?: string }}
  */
-const checkSaree = async (seriesCode, ownerId, excludeId = null) => {
+const checkSaree = async (seriesCode, ownerId, excludeId = null, brand = null) => {
   let q = supabase
     .from('sarees')
-    .select('id, series_code, sari_name')
+    .select('id, series_code, sari_name, brand')
     .eq('owner_id', ownerId)
     .ilike('series_code', seriesCode.trim().toUpperCase())
     .limit(1);
+  // Shop isolation: a KP sari is only a duplicate of another KP sari, never KPR.
+  if (brand) q = q.eq('brand', brand);
   if (excludeId) q = q.neq('id', excludeId);
 
   const { data } = await q;
   if (data?.length > 0) {
-    return { isDuplicate: true, existingId: data[0].id, existingCode: data[0].series_code, existingName: data[0].sari_name };
+    return { isDuplicate: true, existingId: data[0].id, existingCode: data[0].series_code, existingName: data[0].sari_name, existingBrand: data[0].brand };
   }
   return { isDuplicate: false };
 };
@@ -190,7 +192,18 @@ const checkCombination = async (beamId, incoming, ownerId, excludeComboId = null
     };
   }
 
-  // New combination
+  // New combination. When it partially overlaps an existing combination
+  // (some shared colours), attach that combination + a colour diff so the UI can
+  // show "existing sari already has F-1, F-2 — new: F-3" (spec §6). When there is
+  // no overlap at all, it is a genuinely fresh combination with no reference.
+  if (bestScore > 0) {
+    return {
+      status: 'NEW',
+      score: bestScore,
+      existingCombo: combo,
+      diff: buildDiff(combo.combination_colors || [], incoming.colors || []),
+    };
+  }
   return { status: 'NEW', score: bestScore };
 };
 
@@ -237,55 +250,110 @@ const buildDiff = (existingColors, incomingColors) => {
  *
  * @returns {Array<{ entry, status, score, existingCombo, diff, existingSareeId, existingBeamId }>}
  */
-const checkWhatsAppBatch = async (entries, ownerId) => {
+/**
+ * Canonical statuses (mirrored on the client) — spec §11:
+ *   NEW_SARI            sari code not in DB
+ *   SARI_EXISTS         sari in DB, colours not comparable (no colours parsed)
+ *   NEW_COMBINATION     sari in DB, this beam/combination is new
+ *   COMBINATION_EXISTS  sari + combination + colours already in DB (exact)
+ *   SIMILAR             sari in DB, a very similar combination exists (review)
+ *   DUPLICATE_IN_MESSAGE repeated within the pasted message
+ *   MISSING_INFO        recognisable data but no sari code to identify it
+ *   INVALID             nothing usable could be extracted
+ * Independent overlay flags: different_code, missing_fields, duplicate_in_message.
+ */
+const checkWhatsAppBatch = async (entries, ownerId, brand = null) => {
   const results = [];
 
   for (const entry of entries) {
-    const result = { entry, status: 'NEW', score: 0, existingCombo: null, diff: null, existingSareeId: null, existingBeamId: null };
+    // Per-entry shop wins (e.g. a "KPR" header inside the message), else the
+    // shop the user is importing into. Everything below is scoped to it.
+    const entryBrand = entry.brand || brand || null;
+    const result = {
+      entry,
+      status: 'NEW_SARI',
+      db_status: null,
+      score: 0,
+      existingCombo: null,
+      diff: null,
+      existingSareeId: null,
+      existingSareeName: null,
+      existingBeamId: null,
+      // Overlay flags passed straight through from the parser for the UI.
+      duplicate_in_message: !!entry.duplicate_in_message,
+      duplicate_of: entry.duplicate_of || null,
+      different_code: !!entry.different_code,
+      missing_fields: entry.missing_fields || [],
+      color_warnings: entry.color_warnings || [],
+      brand: entryBrand,
+    };
 
-    // L1: Saree check
-    if (entry.series_code) {
-      const sareeCheck = await checkSaree(entry.series_code, ownerId);
-      if (!sareeCheck.isDuplicate) {
-        result.status = 'NEW_SAREE';
-        results.push(result);
-        continue;
-      }
-      result.existingSareeId = sareeCheck.existingId;
-    } else {
-      result.status = 'MISSING_SERIES';
+    const hasColors = (entry.colors || []).length > 0;
+
+    // ── Unrecognisable / missing identity ────────────────────────────────────
+    if (!entry.series_code) {
+      result.status = (hasColors || entry.beam_name || entry.stock != null) ? 'MISSING_INFO' : 'INVALID';
       results.push(result);
       continue;
     }
 
-    // L2: Beam check
-    if (entry.beam_name && result.existingSareeId) {
+    // ── L1: Saree existence (shop-scoped) ────────────────────────────────────
+    const sareeCheck = await checkSaree(entry.series_code, ownerId, null, entryBrand);
+    if (!sareeCheck.isDuplicate) {
+      result.db_status = 'NEW_SARI';
+      result.status = entry.duplicate_in_message ? 'DUPLICATE_IN_MESSAGE' : 'NEW_SARI';
+      results.push(result);
+      continue;
+    }
+    result.existingSareeId = sareeCheck.existingId;
+    result.existingSareeName = sareeCheck.existingName || null;
+
+    // Sari exists but we have no colours to compare → saree-level match only.
+    if (!hasColors) {
+      result.db_status = 'SARI_EXISTS';
+      result.status = entry.duplicate_in_message ? 'DUPLICATE_IN_MESSAGE' : 'SARI_EXISTS';
+      results.push(result);
+      continue;
+    }
+
+    // ── L2: Beam existence within the saree ──────────────────────────────────
+    let existingBeamId = null;
+    if (entry.beam_name) {
       const beamCheck = await checkBeam(result.existingSareeId, entry.beam_name, ownerId);
-      if (!beamCheck.isDuplicate) {
-        result.status = 'NEW_BEAM';
-        results.push(result);
-        continue;
-      }
-      result.existingBeamId = beamCheck.existingBeamId;
-    } else if (!entry.beam_name) {
-      result.status = 'MISSING_BEAM';
+      if (beamCheck.isDuplicate) existingBeamId = beamCheck.existingBeamId;
+    }
+    result.existingBeamId = existingBeamId;
+
+    // No matching beam → the whole combination is new to an existing sari.
+    if (!existingBeamId) {
+      result.db_status = 'NEW_COMBINATION';
+      result.status = entry.duplicate_in_message ? 'DUPLICATE_IN_MESSAGE' : 'NEW_COMBINATION';
       results.push(result);
       continue;
     }
 
-    // L3+4: Combination similarity check
-    if (result.existingBeamId) {
-      const comboCheck = await checkCombination(result.existingBeamId, {
-        combination_name: entry.combination_name,
-        colors: entry.colors || [],
-        image_url: entry.image_url || null,
-      }, ownerId);
+    // ── L3+4: Combination / colour comparison within the beam ────────────────
+    const comboCheck = await checkCombination(existingBeamId, {
+      combination_name: entry.combination_name,
+      colors: entry.colors || [],
+      image_url: entry.image_url || null,
+    }, ownerId);
 
-      result.status = comboCheck.status;
-      result.score = comboCheck.score;
-      result.existingCombo = comboCheck.existingCombo || null;
-      result.diff = comboCheck.diff || null;
+    result.score = comboCheck.score;
+    result.existingCombo = comboCheck.existingCombo || null;
+    result.diff = comboCheck.diff || null;
+
+    // Map the combination-level result onto the canonical taxonomy.
+    let canonical;
+    if (comboCheck.status === 'DUPLICATE' || comboCheck.status === 'IMAGE_CONFLICT') {
+      canonical = 'COMBINATION_EXISTS';
+    } else if (comboCheck.status === 'SIMILAR') {
+      canonical = 'SIMILAR';
+    } else {
+      canonical = 'NEW_COMBINATION';
     }
+    result.db_status = canonical;
+    result.status = entry.duplicate_in_message ? 'DUPLICATE_IN_MESSAGE' : canonical;
 
     results.push(result);
   }

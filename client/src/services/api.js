@@ -92,6 +92,15 @@ export const combinationImageAPI = {
 export const parserAPI = {
   parseWhatsApp: (message) => api.post('/parser/whatsapp', { message }),
   simulateWebhook: (message) => api.post('/parser/whatsapp-webhook', { message }),
+  ocrStatus: () => api.get('/parser/ocr-status'),
+  ocrImage: (file) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.post('/parser/ocr', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+  },
 };
 
 // Duplicate Detection APIs
