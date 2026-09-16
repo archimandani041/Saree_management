@@ -9,7 +9,6 @@ import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
-import RequestStockDialog from '../components/common/RequestStockDialog';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -33,7 +32,6 @@ import {
   Pencil,
   Trash2,
   Sparkles,
-  MessageCircle,
   Layers,
   CheckCircle2,
   AlertTriangle,
@@ -58,11 +56,6 @@ const SareeDetail = () => {
   const [seriesConfirmOpen, setSeriesConfirmOpen] = useState(false);
   const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
   const [manualSeriesLetter, setManualSeriesLetter] = useState('');
-
-  // Request Stock dialog
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [requestCombo, setRequestCombo] = useState(null);
-  const [requestBeamName, setRequestBeamName] = useState('');
 
   // Delete dialog
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -456,20 +449,6 @@ const SareeDetail = () => {
                                   Min: {combo.minimum_stock ?? 20}
                                 </span>
                               </div>
-
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setRequestCombo(combo);
-                                  setRequestBeamName(beam.beam_name);
-                                  setRequestDialogOpen(true);
-                                }}
-                                className="h-7 text-[11px] font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
-                              >
-                                <MessageCircle className="w-3 h-3 mr-1" />
-                                WhatsApp
-                              </Button>
                             </div>
                           </div>
                         );
@@ -598,25 +577,6 @@ const SareeDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* WhatsApp Stock Request Modal */}
-      {requestCombo && (
-        <RequestStockDialog
-          open={requestDialogOpen}
-          onClose={() => {
-            setRequestDialogOpen(false);
-            setRequestCombo(null);
-          }}
-          seriesCode={saree.series_code}
-          sareeId={saree.id}
-          beamName={requestBeamName}
-          combination={requestCombo}
-          onSuccess={() => {
-            enqueueSnackbar('Stock replenishment request dispatched via WhatsApp!', { variant: 'success' });
-            fetchSareeDetails();
-          }}
-        />
-      )}
     </div>
   );
 };

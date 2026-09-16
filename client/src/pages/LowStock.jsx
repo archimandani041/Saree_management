@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
-import RequestStockDialog from '../components/common/RequestStockDialog';
 import { getStockHealth } from '../constants/terms';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -19,7 +18,6 @@ import {
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
-  MessageCircle,
   ExternalLink,
   Layers,
   ArrowUpRight,
@@ -30,13 +28,6 @@ const LowStock = () => {
   const navigate = useNavigate();
   const [sarees, setSarees] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Request Stock Dialog
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedCombo, setSelectedCombo] = useState(null);
-  const [selectedBeamName, setSelectedBeamName] = useState('');
-  const [selectedSeriesCode, setSelectedSeriesCode] = useState('');
-  const [selectedSareeId, setSelectedSareeId] = useState('');
 
   const fetchLowStockSarees = async () => {
     setLoading(true);
@@ -96,18 +87,6 @@ const LowStock = () => {
     if (b.stock === 0 && a.stock !== 0) return 1;
     return b.shortage - a.shortage;
   });
-
-  const openRequest = (item) => {
-    if (!item.combo) {
-      navigate(`/sarees/${item.saree.id}`);
-      return;
-    }
-    setSelectedCombo({ ...item.combo, brand: item.saree.brand || item.combo.brand });
-    setSelectedBeamName(item.beam?.beam_name || 'Beam');
-    setSelectedSeriesCode(item.saree.series_code || '');
-    setSelectedSareeId(item.saree.id);
-    setDialogOpen(true);
-  };
 
   if (loading) {
     return (
@@ -289,14 +268,6 @@ const LowStock = () => {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2 pt-2 md:pt-0 shrink-0">
                       <Button
-                        size="sm"
-                        onClick={() => openRequest(item)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Request Stock
-                      </Button>
-                      <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/sarees/${item.saree.id}`)}
@@ -312,21 +283,6 @@ const LowStock = () => {
           })}
         </div>
       )}
-
-      {/* Stock Request Dialog */}
-      <RequestStockDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        combination={selectedCombo}
-        beamName={selectedBeamName}
-        seriesCode={selectedSeriesCode}
-        sareeId={selectedSareeId}
-        initialMovementType="STOCK"
-        onSuccess={() => {
-          fetchLowStockSarees();
-          setDialogOpen(false);
-        }}
-      />
     </div>
   );
 };

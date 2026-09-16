@@ -9,10 +9,9 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { stockAPI, combinationAPI } from '../services/api';
+import { stockAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import InventoryLedgerDrawer from '../components/common/InventoryLedgerDrawer';
-import RequestStockDialog from '../components/common/RequestStockDialog';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -41,7 +40,6 @@ import {
   TableProperties,
   Clock,
   Eye,
-  MessageCircle,
   Trash2,
   RotateCcw,
   Plus,
@@ -122,42 +120,6 @@ const StockHistory = () => {
   const [targetDeleteItem, setTargetDeleteItem] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [snack, setSnack] = useState('');
-
-  // Request Stock via WhatsApp state
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [requestCombo, setRequestCombo] = useState(null);
-  const [requestBeamName, setRequestBeamName] = useState('');
-  const [requestSeriesCode, setRequestSeriesCode] = useState('');
-  const [requestSareeId, setRequestSareeId] = useState(null);
-
-  const handleOpenRequestStock = async (item) => {
-    if (!item?.combination_id) return;
-    try {
-      const { data } = await combinationAPI.getById(item.combination_id);
-      if (data?.combination) {
-        const combo = data.combination;
-        setRequestCombo({ ...combo, brand: combo.brand || combo.beams?.sarees?.brand || 'KP' });
-        setRequestBeamName(combo.beams?.beam_name || item.beam_name || 'Beam');
-        setRequestSeriesCode(combo.beams?.sarees?.series_code || item.series_code || 'Saree');
-        setRequestSareeId(combo.beams?.saree_id || item.saree_id);
-        setRequestDialogOpen(true);
-        return;
-      }
-    } catch (_) {}
-
-    setRequestCombo({
-      id: item.combination_id,
-      combination_name: item.combination_name || 'Combination',
-      current_stock: item.new_stock ?? 0,
-      minimum_stock: item.combinations?.minimum_stock ?? 20,
-      combination_colors: item.combinations?.combination_colors || [],
-      brand: item.combinations?.brand || 'KP'
-    });
-    setRequestBeamName(item.beam_name || 'Beam');
-    setRequestSeriesCode(item.series_code || 'Saree');
-    setRequestSareeId(item.saree_id);
-    setRequestDialogOpen(true);
-  };
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -545,15 +507,6 @@ const StockHistory = () => {
                             >
                               <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Update Stock via WhatsApp"
-                              onClick={() => handleOpenRequestStock(item)}
-                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
-                            >
-                              <MessageCircle className="w-3.5 h-3.5" />
-                            </Button>
                             {isAdmin && (
                               <Button
                                 variant="ghost"
@@ -647,7 +600,6 @@ const StockHistory = () => {
         onClose={() => setSelectedDrawerItem(null)}
         item={selectedDrawerItem}
         isAdmin={isAdmin}
-        onUpdateStock={handleOpenRequestStock}
         onRollback={(item) => {
           setSelectedDrawerItem(null);
           setTargetRollbackItem(item);
@@ -714,22 +666,6 @@ const StockHistory = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* WhatsApp Stock Request Dialog */}
-      <RequestStockDialog
-        open={requestDialogOpen}
-        onClose={() => setRequestDialogOpen(false)}
-        combination={requestCombo}
-        beamName={requestBeamName}
-        seriesCode={requestSeriesCode}
-        sareeId={requestSareeId}
-        onSuccess={() => {
-          fetchHistory();
-          fetchStats();
-          setRequestDialogOpen(false);
-          setSnack('Stock updated successfully via WhatsApp!');
-        }}
-      />
     </div>
   );
 };

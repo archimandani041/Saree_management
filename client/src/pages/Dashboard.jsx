@@ -31,7 +31,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   Legend, AreaChart, Area, ReferenceLine
 } from 'recharts';
-import RequestStockDialog from '../components/common/RequestStockDialog';
 import {
   LayoutDashboard,
   Shirt,
@@ -48,7 +47,6 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  MessageCircle,
   ArrowRight,
   CheckCircle2,
   ExternalLink,
@@ -76,45 +74,6 @@ const Dashboard = () => {
   const [loadingPrediction, setLoadingPrediction] = useState(false);
   const [expandedBeam, setExpandedBeam] = useState(null);
   const [showPredictionBreakdown, setShowPredictionBreakdown] = useState(false);
-
-  // Request Stock Dialog States
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [selectedCombo, setSelectedCombo] = useState(null);
-  const [selectedBeamName, setSelectedBeamName] = useState('');
-  const [selectedSeriesCode, setSelectedSeriesCode] = useState('');
-  const [selectedSareeId, setSelectedSareeId] = useState('');
-  const [requestMovementType, setRequestMovementType] = useState('STOCK_IN');
-
-  const handleActionableRequestStock = async (item) => {
-    try {
-      if (!item.sareeId || !item.id) return;
-      const res = await sareeAPI.getById(item.sareeId);
-      const saree = res.data.saree;
-
-      let matchedBeam = null;
-      let matchedCombo = null;
-      for (const b of saree.beams || []) {
-        for (const c of b.combinations || []) {
-          if (c.id === item.id) {
-            matchedBeam = b;
-            matchedCombo = c;
-            break;
-          }
-        }
-      }
-
-      if (matchedCombo) {
-        setSelectedCombo(matchedCombo);
-        setSelectedBeamName(matchedBeam?.beam_name || 'Beam');
-        setSelectedSeriesCode(saree.series_code || 'Saree');
-        setSelectedSareeId(saree.id);
-        setRequestMovementType(item.type === 'Out of Stock' || item.type === 'Low Stock' ? 'STOCK_IN' : 'DELIVERY_OUT');
-        setRequestDialogOpen(true);
-      }
-    } catch (err) {
-      console.error('Failed to trigger stock request from card:', err);
-    }
-  };
 
   // Fetch Dashboard Stats
   const fetchDashboardData = useCallback(async () => {
@@ -796,14 +755,6 @@ const Dashboard = () => {
                         >
                           View
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleActionableRequestStock(item)}
-                          className="h-7 px-2 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                        >
-                          <MessageCircle className="w-3 h-3 mr-1" />
-                          Stock
-                        </Button>
                       </div>
                     </div>
                   ))
@@ -882,14 +833,6 @@ const Dashboard = () => {
                           className="h-7 px-2 text-[11px] font-bold"
                         >
                           Forecast
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleActionableRequestStock(item)}
-                          className="h-7 px-2 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                        >
-                          <MessageCircle className="w-3 h-3 mr-1" />
-                          Deliver
                         </Button>
                       </div>
                     </div>
@@ -1400,21 +1343,6 @@ const Dashboard = () => {
           </Card>
         </div>
       )}
-
-      {/* Stock Request Modal */}
-      <RequestStockDialog
-        open={requestDialogOpen}
-        onClose={() => setRequestDialogOpen(false)}
-        combination={selectedCombo}
-        beamName={selectedBeamName}
-        seriesCode={selectedSeriesCode}
-        sareeId={selectedSareeId}
-        initialMovementType={requestMovementType}
-        onSuccess={() => {
-          fetchDashboardData();
-          setRequestDialogOpen(false);
-        }}
-      />
     </div>
   );
 };
