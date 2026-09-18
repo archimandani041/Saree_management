@@ -62,6 +62,8 @@ const AppContent = () => {
         <Route path="/" element={<RootRoute />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Login defaultSignUp={true} />} />
+        <Route path="/register" element={<Login defaultSignUp={true} />} />
         {/* Email verification callback — must be public and match the Supabase redirect URL */}
         <Route path="/auth/callback" element={<AuthCallback />} />
         {/* Password recovery — shown after clicking reset link, user sets new password here */}

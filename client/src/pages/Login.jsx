@@ -46,7 +46,7 @@ const SLIDES = [
   }
 ];
 
-const Login = () => {
+const Login = ({ defaultSignUp = false }) => {
   const { login, signUp, isAuthenticated } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
@@ -66,9 +66,31 @@ const Login = () => {
   }, [isAuthenticated, navigate, from]);
 
   // Mode toggles
-  const [isSignUp, setIsSignUp] = useState(false);
+  const isInitialSignUp = defaultSignUp ||
+    searchParams.get('mode') === 'signup' ||
+    searchParams.get('mode') === 'register' ||
+    location.pathname === '/signup' ||
+    location.pathname === '/register';
+
+  const [isSignUp, setIsSignUp] = useState(() => Boolean(isInitialSignUp));
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const shouldSignUp = defaultSignUp ||
+      searchParams.get('mode') === 'signup' ||
+      searchParams.get('mode') === 'register' ||
+      location.pathname === '/signup' ||
+      location.pathname === '/register';
+
+    if (shouldSignUp) {
+      setIsSignUp(true);
+      setIsForgotPassword(false);
+    } else if (searchParams.get('mode') === 'login' || (!searchParams.get('mode') && location.pathname === '/login')) {
+      setIsSignUp(false);
+      setIsForgotPassword(false);
+    }
+  }, [searchParams, location.pathname, defaultSignUp]);
 
   // Form Fields
   const [firstName, setFirstName] = useState('');
@@ -264,7 +286,7 @@ const Login = () => {
                 {isForgotPassword
                   ? 'Reset Password'
                   : isSignUp
-                  ? 'Join KP Creation'
+                  ? 'Create Account'
                   : 'Welcome Back'}
               </h2>
               <p className="text-sm text-muted-foreground mt-1.5">

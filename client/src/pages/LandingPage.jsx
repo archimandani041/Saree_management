@@ -834,9 +834,9 @@ export default function LandingPage() {
   const goLogin = () => navigate('/login');
   const goSignUp = (plan = '') => {
     if (plan) {
-      navigate(`/login?mode=signup&plan=${plan}`);
+      navigate(`/signup?plan=${plan}`);
     } else {
-      navigate('/login?mode=signup');
+      navigate('/signup');
     }
   };
   const goDashboard = () => navigate('/dashboard');
