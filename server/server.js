@@ -97,6 +97,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/parser', require('./routes/parser'));
 app.use('/api/duplicates', require('./routes/duplicates'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Health check
 app.get('/api/health', (req, res) => {

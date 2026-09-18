@@ -170,9 +170,15 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user && !!token;
   const isAdmin = isAuthenticated;
   const isStaff = isAuthenticated;
+  const isSuperAdmin = Boolean(
+    user?.is_superadmin ||
+    user?.email === 'admin@saristockmanager.com' ||
+    user?.role === 'superadmin' ||
+    user?.username === 'superadmin'
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signUp, logout, isAdmin, isStaff, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, loading, login, signUp, logout, isAdmin, isStaff, isSuperAdmin, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

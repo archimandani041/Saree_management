@@ -26,11 +26,12 @@ import {
   ChevronRight,
   Sparkles,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  Users
 } from 'lucide-react';
 import { getActiveSubscription } from '../../services/subscriptionService';
 import { sareeAPI } from '../../services/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 const DRAWER_WIDTH = 264;
 
@@ -62,11 +63,30 @@ const navSections = [
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
   const { sidebarOpen, setSidebarOpen, themeMode, toggleTheme } = useApp();
 
   const [subscription, setSubscription] = useState(getActiveSubscription());
   const [sareesCount, setSareesCount] = useState(12);
+
+  const computedSections = useMemo(() => {
+    const list = [...navSections];
+    if (isSuperAdmin || user?.role === 'admin' || user?.email === 'admin@saristockmanager.com') {
+      list.push({
+        heading: 'Administration',
+        items: [
+          {
+            label: 'All Accounts & Plans',
+            path: '/admin/accounts',
+            icon: Users,
+            badge: 'Master',
+            isAdminBadge: true,
+          },
+        ],
+      });
+    }
+    return list;
+  }, [isSuperAdmin, user]);
 
   useEffect(() => {
     const handleSubChange = () => setSubscription(getActiveSubscription());
@@ -102,6 +122,9 @@ const Sidebar = () => {
     }
     if (path === '/settings') {
       return location.pathname === '/settings';
+    }
+    if (path === '/admin/accounts') {
+      return location.pathname.startsWith('/admin');
     }
     return location.pathname === path || (path !== '/' && path !== '/dashboard' && location.pathname.startsWith(path));
   };
@@ -153,7 +176,7 @@ const Sidebar = () => {
         {/* Navigation List */}
         <ScrollArea className="flex-1 px-3 py-4">
           <div className="space-y-6">
-            {navSections.map((section) => (
+            {computedSections.map((section) => (
               <div key={section.heading} className="space-y-1">
                 <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                   {section.heading}
@@ -186,7 +209,19 @@ const Sidebar = () => {
                           <span>{item.label}</span>
                         </div>
 
-                        {item.isPlanBadge ? (
+                        {item.isAdminBadge ? (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-5 px-1.5 text-[9px] font-bold uppercase tracking-wider",
+                              active
+                                ? "border-amber-400 bg-amber-400 text-burgundy-950"
+                                : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            {item.badge}
+                          </Badge>
+                        ) : item.isPlanBadge ? (
                           <Badge
                             variant="outline"
                             className={cn(
@@ -291,8 +326,11 @@ const Sidebar = () => {
                 <span className="text-xs font-bold text-foreground truncate leading-tight">
                   {user?.full_name || 'Admin User'}
                 </span>
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                  {user?.role || 'Staff'}
+                <span className={cn(
+                  "text-[10px] font-medium uppercase tracking-wider",
+                  isSuperAdmin ? "text-amber-600 dark:text-amber-400 font-bold" : "text-muted-foreground"
+                )}>
+                  {isSuperAdmin ? 'Platform Super Admin' : (user?.role || 'Staff')}
                 </span>
               </div>
             </div>

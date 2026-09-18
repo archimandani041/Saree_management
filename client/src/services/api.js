@@ -163,4 +163,13 @@ export const stockRequestAPI = {
   delete: (id) => api.delete(`/stock-requests/${id}`),
 };
 
+// Super Admin Platform Account & Plan Management APIs
+export const adminAPI = {
+  getAccounts: () => api.get('/admin/accounts'),
+  updatePlan: (id, data) => api.put(`/admin/accounts/${id}/plan`, data),
+  extendDeadline: (id, data) => api.post(`/admin/accounts/${id}/extend`, data),
+  toggleStatus: (id, data) => api.put(`/admin/accounts/${id}/status`, data),
+  createAccount: (data) => api.post('/admin/accounts', data),
+};
+
 export default api;

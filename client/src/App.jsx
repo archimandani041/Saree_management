@@ -28,6 +28,7 @@ import StockHistory from './pages/StockHistory';
 import Settings from './pages/Settings';
 import StockRequests from './pages/StockRequests';
 import BillingUsage from './pages/BillingUsage';
+import AdminAccounts from './pages/AdminAccounts';
 
 /**
  * RootRoute:
@@ -123,6 +124,20 @@ const AppContent = () => {
                         <Settings />
                       </ProtectedRoute>
                     }
+                  />
+
+                  {/* Super Admin Unified Platform Accounts & Plan Management */}
+                  <Route
+                    path="/admin/accounts"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        <AdminAccounts />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={<Navigate to="/admin/accounts" replace />}
                   />
 
                   {/* Fallback */}
