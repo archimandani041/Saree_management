@@ -47,7 +47,7 @@ const SLIDES = [
 ];
 
 const Login = ({ defaultSignUp = false }) => {
-  const { login, signUp, isAuthenticated } = useAuth();
+  const { login, signUp, isAuthenticated, isSuperAdmin } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,17 +56,18 @@ const Login = ({ defaultSignUp = false }) => {
   const isPaid = searchParams.get('paid') === 'true';
   const planParam = searchParams.get('plan');
   const txnParam = searchParams.get('txn');
-  const rawTarget = location.state?.from?.pathname || location.state?.from || '/dashboard';
+  const defaultTarget = isSuperAdmin ? '/admin/accounts' : '/dashboard';
+  const rawTarget = location.state?.from?.pathname || location.state?.from;
   const from = (!rawTarget || rawTarget === '/' || rawTarget === '/landing' || rawTarget === '/login')
-    ? '/dashboard'
+    ? defaultTarget
     : rawTarget;
 
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from, { replace: true });
+      navigate(isSuperAdmin ? '/admin/accounts' : from, { replace: true });
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, isSuperAdmin, navigate, from]);
 
   // Mode toggles
   const isInitialSignUp = defaultSignUp ||
@@ -131,7 +132,8 @@ const Login = ({ defaultSignUp = false }) => {
       await login(email.trim(), password);
       setThemeMode('light');
       localStorage.setItem('sari_theme', 'light');
-      navigate(from, { replace: true });
+      const isAdminEmail = email.trim().toLowerCase() === 'admin@saristockmanager.com';
+      navigate(isAdminEmail ? '/admin/accounts' : from, { replace: true });
     } catch (err) {
       console.error(err);
       if (err.message?.toLowerCase().includes('invalid') || err.message?.toLowerCase().includes('credentials')) {

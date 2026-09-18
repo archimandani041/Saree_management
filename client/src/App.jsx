@@ -36,13 +36,15 @@ import AdminAccounts from './pages/AdminAccounts';
  * Automatically routes authenticated users directly to /dashboard.
  */
 const RootRoute = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isSuperAdmin, loading } = useAuth();
   if (loading) return null;
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+  if (!isAuthenticated) return <LandingPage />;
+  return isSuperAdmin ? <Navigate to="/admin/accounts" replace /> : <Navigate to="/dashboard" replace />;
 };
 
 const AppContent = () => {
   const { themeMode } = useApp();
+  const { isSuperAdmin } = useAuth();
   const theme = getTheme(themeMode);
 
   // Sync Tailwind dark mode class with MUI theme mode
@@ -75,26 +77,74 @@ const AppContent = () => {
         <Route
           path="/*"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <ProtectedRoute>
               <Layout>
                 <Routes>
-                  {/* Shared Dashboard */}
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  {/* Shared Dashboard — Boutique User Only */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute userOnly={true}>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/"
+                    element={<Navigate to={isSuperAdmin ? "/admin/accounts" : "/dashboard"} replace />}
+                  />
 
-                  {/* Saree Inventory Grid */}
-                  <Route path="/sarees" element={<AllSarees />} />
-                  <Route path="/sarees/:id" element={<SareeDetail />} />
-                  <Route path="/search" element={<Navigate to="/sarees" replace />} />
-                  <Route path="/low-stock" element={<LowStock />} />
-                  <Route path="/history" element={<StockHistory />} />
-                  <Route path="/stock-requests" element={<StockRequests />} />
+                  {/* Saree Inventory Grid — Boutique User Only */}
+                  <Route
+                    path="/sarees"
+                    element={
+                      <ProtectedRoute userOnly={true}>
+                        <AllSarees />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/sarees/:id"
+                    element={
+                      <ProtectedRoute userOnly={true}>
+                        <SareeDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/search"
+                    element={<Navigate to="/sarees" replace />}
+                  />
+                  <Route
+                    path="/low-stock"
+                    element={
+                      <ProtectedRoute userOnly={true}>
+                        <LowStock />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/history"
+                    element={
+                      <ProtectedRoute userOnly={true}>
+                        <StockHistory />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/stock-requests"
+                    element={
+                      <ProtectedRoute userOnly={true}>
+                        <StockRequests />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                  {/* Admin & Staff Saree Mutations */}
+                  {/* Boutique User Saree Mutations */}
                   <Route
                     path="/sarees/add"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                      <ProtectedRoute userOnly={true}>
                         <SareeForm />
                       </ProtectedRoute>
                     }
@@ -102,7 +152,7 @@ const AppContent = () => {
                   <Route
                     path="/sarees/edit/:id"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                      <ProtectedRoute userOnly={true}>
                         <SareeEdit />
                       </ProtectedRoute>
                     }
@@ -111,7 +161,7 @@ const AppContent = () => {
                   <Route
                     path="/billing"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                      <ProtectedRoute userOnly={true}>
                         <BillingUsage />
                       </ProtectedRoute>
                     }
@@ -120,17 +170,17 @@ const AppContent = () => {
                   <Route
                     path="/settings"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute userOnly={true}>
                         <Settings />
                       </ProtectedRoute>
                     }
                   />
 
-                  {/* Super Admin Unified Platform Accounts & Plan Management */}
+                  {/* Super Admin Unified Platform Accounts & Plan Management — Super Admin Only */}
                   <Route
                     path="/admin/accounts"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute superAdminOnly={true}>
                         <AdminAccounts />
                       </ProtectedRoute>
                     }
@@ -141,7 +191,10 @@ const AppContent = () => {
                   />
 
                   {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  <Route
+                    path="*"
+                    element={<Navigate to={isSuperAdmin ? "/admin/accounts" : "/dashboard"} replace />}
+                  />
                 </Routes>
               </Layout>
             </ProtectedRoute>

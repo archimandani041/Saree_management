@@ -70,23 +70,24 @@ const Sidebar = () => {
   const [sareesCount, setSareesCount] = useState(12);
 
   const computedSections = useMemo(() => {
-    const list = [...navSections];
-    if (isSuperAdmin || user?.role === 'admin' || user?.email === 'admin@saristockmanager.com') {
-      list.push({
-        heading: 'Administration',
-        items: [
-          {
-            label: 'All Accounts & Plans',
-            path: '/admin/accounts',
-            icon: Users,
-            badge: 'Master',
-            isAdminBadge: true,
-          },
-        ],
-      });
+    if (isSuperAdmin) {
+      return [
+        {
+          heading: 'Platform Management',
+          items: [
+            {
+              label: 'Account & Subscriptions',
+              path: '/admin/accounts',
+              icon: Users,
+              badge: 'Master',
+              isAdminBadge: true,
+            },
+          ],
+        },
+      ];
     }
-    return list;
-  }, [isSuperAdmin, user]);
+    return navSections;
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     const handleSubChange = () => setSubscription(getActiveSubscription());
@@ -159,7 +160,7 @@ const Sidebar = () => {
                 KP <span className="text-burgundy-900 dark:text-burgundy-400">Creation</span>
               </span>
               <span className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
-                Inventory Suite
+                {isSuperAdmin ? 'Platform Admin Suite' : 'Inventory Suite'}
               </span>
             </div>
           </div>
@@ -250,70 +251,75 @@ const Sidebar = () => {
           </div>
         </ScrollArea>
 
-        {/* Account Plan & Limits Widget in Left Sidebar */}
-        <div className="px-3 pt-2 pb-1 border-t border-border/50">
-          <div
-            onClick={() => {
-              navigate('/billing');
-              if (window.innerWidth < 768) setSidebarOpen(false);
-            }}
-            className="group p-2.5 rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-burgundy-900/40 dark:hover:border-amber-400/40 cursor-pointer transition-all shadow-xs"
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs font-bold text-foreground">{subscription.name} Plan</span>
+        {/* Boutique User Quota Widget & Action Button — Hidden for Super Admin */}
+        {!isSuperAdmin && (
+          <>
+            {/* Account Plan & Limits Widget in Left Sidebar */}
+            <div className="px-3 pt-2 pb-1 border-t border-border/50">
+              <div
+                onClick={() => {
+                  navigate('/billing');
+                  if (window.innerWidth < 768) setSidebarOpen(false);
+                }}
+                className="group p-2.5 rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-burgundy-900/40 dark:hover:border-amber-400/40 cursor-pointer transition-all shadow-xs"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-xs font-bold text-foreground">{subscription.name} Plan</span>
+                  </div>
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold">
+                    Active
+                  </Badge>
+                </div>
+
+                {/* Saree Quota Mini Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Saree SKUs</span>
+                    <span className="font-mono font-semibold text-foreground">
+                      {sareesCount} / {(subscription.limits?.sarees || 500).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-300",
+                        (sareesCount / (subscription.limits?.sarees || 500)) >= 0.9 ? "bg-red-500" : "bg-burgundy-900 dark:bg-amber-400"
+                      )}
+                      style={{ width: `${Math.min(100, Math.round((sareesCount / (subscription.limits?.sarees || 500)) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-burgundy-900 dark:text-amber-300 group-hover:underline">
+                  <span>Account Limits & Usage</span>
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </div>
               </div>
-              <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold">
-                Active
-              </Badge>
             </div>
 
-            {/* Saree Quota Mini Bar */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>Saree SKUs</span>
-                <span className="font-mono font-semibold text-foreground">
-                  {sareesCount} / {(subscription.limits?.sarees || 500).toLocaleString()}
-                </span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-300",
-                    (sareesCount / (subscription.limits?.sarees || 500)) >= 0.9 ? "bg-red-500" : "bg-burgundy-900 dark:bg-amber-400"
-                  )}
-                  style={{ width: `${Math.min(100, Math.round((sareesCount / (subscription.limits?.sarees || 500)) * 100))}%` }}
-                />
-              </div>
+            {/* Action Button */}
+            <div className="p-3 border-t border-border/50">
+              <Button
+                variant="luxury"
+                className="w-full flex items-center justify-center gap-2 h-10 text-xs uppercase tracking-wider font-bold shadow-luxury"
+                onClick={() => {
+                  if (location.pathname === '/stock-requests') {
+                    const btn = document.getElementById('new-stock-request-btn');
+                    if (btn) btn.click();
+                  } else {
+                    navigate('/sarees/add');
+                    if (window.innerWidth < 768) setSidebarOpen(false);
+                  }
+                }}
+              >
+                <PlusCircle className="w-4 h-4" />
+                {location.pathname === '/stock-requests' ? 'New Request' : 'New Collection'}
+              </Button>
             </div>
-
-            <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-burgundy-900 dark:text-amber-300 group-hover:underline">
-              <span>Account Limits & Usage</span>
-              <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="p-3 border-t border-border/50">
-          <Button
-            variant="luxury"
-            className="w-full flex items-center justify-center gap-2 h-10 text-xs uppercase tracking-wider font-bold shadow-luxury"
-            onClick={() => {
-              if (location.pathname === '/stock-requests') {
-                const btn = document.getElementById('new-stock-request-btn');
-                if (btn) btn.click();
-              } else {
-                navigate('/sarees/add');
-                if (window.innerWidth < 768) setSidebarOpen(false);
-              }
-            }}
-          >
-            <PlusCircle className="w-4 h-4" />
-            {location.pathname === '/stock-requests' ? 'New Request' : 'New Collection'}
-          </Button>
-        </div>
+          </>
+        )}
 
         {/* User Card & Footer Controls */}
         <div className="p-3 border-t border-border bg-muted/20 flex flex-col gap-2">
