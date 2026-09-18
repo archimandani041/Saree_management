@@ -594,16 +594,25 @@ function BookDemoModal({ isOpen, onClose, initialPlan = 'team' }) {
 
   if (!isOpen) return null;
 
+  const openWhatsAppDirect = () => {
+    const details = [
+      `Hello KP Creation Team!`,
+      `I would like to book a demo / enquire about the *${(formData.plan || 'TEAM').toUpperCase()}* plan.`,
+      formData.fullName ? `• Name: ${formData.fullName}` : null,
+      formData.businessName ? `• Business / Firm: ${formData.businessName}` : null,
+      formData.phone ? `• Mobile: ${formData.phone}` : null,
+      formData.email ? `• Email: ${formData.email}` : null,
+      formData.message ? `• Requirements: ${formData.message}` : null,
+    ].filter(Boolean).join('\n');
+
+    const text = encodeURIComponent(details);
+    window.open(`https://wa.me/919909680207?text=${text}`, '_blank');
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitted(true);
-  };
-
-  const openWhatsAppDirect = () => {
-    const text = encodeURIComponent(
-      `Hello KP Creation Team! I am ${formData.fullName || 'a business owner'} from ${formData.businessName || 'my saree firm'}. I would like to book a demo / enquire about the ${formData.plan.toUpperCase()} plan.`
-    );
-    window.open(`https://wa.me/919999999999?text=${text}`, '_blank');
+    openWhatsAppDirect();
   };
 
   return (

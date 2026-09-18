@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const API_BASE = (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.trim() !== '')
   ? import.meta.env.VITE_API_URL
-  : (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://kp-creation-api.vercel.app/api');
+  : (import.meta.env.DEV ? 'http://localhost:5001/api' : 'https://kp-creation-api.vercel.app/api');
 
 const api = axios.create({
   baseURL: API_BASE,
