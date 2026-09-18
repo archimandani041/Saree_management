@@ -12,6 +12,7 @@ import { AppProvider, useApp } from './contexts/AppContext';
 import { getTheme } from './theme/theme';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -73,133 +74,126 @@ const AppContent = () => {
         {/* Password recovery — shown after clicking reset link, user sets new password here */}
         <Route path="/set-password" element={<SetNewPassword />} />
 
-        {/* Guarded App Routes */}
+        {/* Guarded App Layout Route */}
         <Route
-          path="/*"
           element={
             <ProtectedRoute>
-              <Layout>
-                <Routes>
-                  {/* Shared Dashboard — Boutique User Only */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/"
-                    element={<Navigate to={isSuperAdmin ? "/admin/accounts" : "/dashboard"} replace />}
-                  />
-
-                  {/* Saree Inventory Grid — Boutique User Only */}
-                  <Route
-                    path="/sarees"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <AllSarees />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/sarees/:id"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <SareeDetail />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/search"
-                    element={<Navigate to="/sarees" replace />}
-                  />
-                  <Route
-                    path="/low-stock"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <LowStock />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/history"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <StockHistory />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/stock-requests"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <StockRequests />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Boutique User Saree Mutations */}
-                  <Route
-                    path="/sarees/add"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <SareeForm />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/sarees/edit/:id"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <SareeEdit />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  <Route
-                    path="/billing"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <BillingUsage />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  <Route
-                    path="/settings"
-                    element={
-                      <ProtectedRoute userOnly={true}>
-                        <Settings />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Super Admin Unified Platform Accounts & Plan Management — Super Admin Only */}
-                  <Route
-                    path="/admin/accounts"
-                    element={
-                      <ProtectedRoute superAdminOnly={true}>
-                        <AdminAccounts />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin"
-                    element={<Navigate to="/admin/accounts" replace />}
-                  />
-
-                  {/* Fallback */}
-                  <Route
-                    path="*"
-                    element={<Navigate to={isSuperAdmin ? "/admin/accounts" : "/dashboard"} replace />}
-                  />
-                </Routes>
-              </Layout>
+              <Layout />
             </ProtectedRoute>
           }
-        />
+        >
+          {/* Super Admin Unified Platform Accounts & Plan Management — Super Admin Only */}
+          <Route
+            path="/admin/accounts"
+            element={
+              <ProtectedRoute superAdminOnly={true}>
+                <AdminAccounts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={<Navigate to="/admin/accounts" replace />}
+          />
+
+          {/* Shared Dashboard — Boutique User Only */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Saree Inventory Grid — Boutique User Only */}
+          <Route
+            path="/sarees"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <AllSarees />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sarees/:id"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <SareeDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search"
+            element={<Navigate to="/sarees" replace />}
+          />
+          <Route
+            path="/low-stock"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <LowStock />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <StockHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stock-requests"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <StockRequests />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Boutique User Saree Mutations */}
+          <Route
+            path="/sarees/add"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <SareeForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sarees/edit/:id"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <SareeEdit />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/billing"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <BillingUsage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute userOnly={true}>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route
+            path="*"
+            element={<Navigate to={isSuperAdmin ? "/admin/accounts" : "/dashboard"} replace />}
+          />
+        </Route>
       </Routes>
       </SnackbarProvider>
     </ThemeProvider>
@@ -208,13 +202,15 @@ const AppContent = () => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <AppProvider>
-          <AppContent />
-        </AppProvider>
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <AppProvider>
+            <AppContent />
+          </AppProvider>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

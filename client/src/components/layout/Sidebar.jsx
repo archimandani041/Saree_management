@@ -93,14 +93,16 @@ const Sidebar = () => {
     const handleSubChange = () => setSubscription(getActiveSubscription());
     window.addEventListener('sari_subscription_changed', handleSubChange);
 
-    sareeAPI.getAll().then(res => {
-      if (res.data?.sarees) {
-        setSareesCount(res.data.sarees.length);
-      }
-    }).catch(() => {});
+    if (!isSuperAdmin) {
+      sareeAPI.getAll().then(res => {
+        if (res.data?.sarees) {
+          setSareesCount(res.data.sarees.length);
+        }
+      }).catch(() => {});
+    }
 
     return () => window.removeEventListener('sari_subscription_changed', handleSubChange);
-  }, []);
+  }, [isSuperAdmin]);
 
   const handleLogout = async () => {
     await logout();

@@ -14,6 +14,7 @@ import { dashboardAPI } from '../../services/api';
 import { useKeyboardShortcut } from '../../hooks/useDebounce';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { cn } from '../../lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,12 +70,12 @@ const Header = () => {
       }
     };
 
-    if (user) {
+    if (user && !isSuperAdmin) {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   // Global search shortcut Ctrl + K
   useKeyboardShortcut('k', true, () => {
