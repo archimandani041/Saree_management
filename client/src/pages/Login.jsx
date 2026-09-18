@@ -53,6 +53,9 @@ const Login = ({ defaultSignUp = false }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
+  const isPaid = searchParams.get('paid') === 'true';
+  const planParam = searchParams.get('plan');
+  const txnParam = searchParams.get('txn');
   const rawTarget = location.state?.from?.pathname || location.state?.from || '/dashboard';
   const from = (!rawTarget || rawTarget === '/' || rawTarget === '/landing' || rawTarget === '/login')
     ? '/dashboard'
@@ -327,6 +330,18 @@ const Login = ({ defaultSignUp = false }) => {
             </div>
 
             {/* Notification & Alerts */}
+            {isPaid && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <div className="font-bold">Payment Verified • {(planParam || 'Team').toUpperCase()} Plan Activated</div>
+                  <div className="text-[11px] opacity-80 mt-0.5">
+                    {txnParam ? `Transaction ID: ${txnParam} • ` : ''}Complete your account setup below to access your inventory.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {sessionReset && (
               <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />

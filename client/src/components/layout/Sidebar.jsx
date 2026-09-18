@@ -24,8 +24,13 @@ import {
   Sun,
   LogOut,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  CreditCard
 } from 'lucide-react';
+import { getActiveSubscription } from '../../services/subscriptionService';
+import { sareeAPI } from '../../services/api';
+import React, { useState, useEffect } from 'react';
 
 const DRAWER_WIDTH = 264;
 
@@ -49,6 +54,7 @@ const navSections = [
     heading: 'System',
     items: [
       { label: 'Settings', path: '/settings', icon: Settings },
+      { label: 'Billing & Usage', path: '/billing', icon: ShieldCheck, isPlanBadge: true },
     ],
   },
 ];
@@ -58,6 +64,22 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { sidebarOpen, setSidebarOpen, themeMode, toggleTheme } = useApp();
+
+  const [subscription, setSubscription] = useState(getActiveSubscription());
+  const [sareesCount, setSareesCount] = useState(12);
+
+  useEffect(() => {
+    const handleSubChange = () => setSubscription(getActiveSubscription());
+    window.addEventListener('sari_subscription_changed', handleSubChange);
+
+    sareeAPI.getAll().then(res => {
+      if (res.data?.sarees) {
+        setSareesCount(res.data.sarees.length);
+      }
+    }).catch(() => {});
+
+    return () => window.removeEventListener('sari_subscription_changed', handleSubChange);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -74,6 +96,12 @@ const Sidebar = () => {
         location.pathname.startsWith('/sarees/add') ||
         location.pathname.startsWith('/sarees/edit')
       );
+    }
+    if (path === '/billing') {
+      return location.pathname === '/billing';
+    }
+    if (path === '/settings') {
+      return location.pathname === '/settings';
     }
     return location.pathname === path || (path !== '/' && path !== '/dashboard' && location.pathname.startsWith(path));
   };
@@ -158,14 +186,26 @@ const Sidebar = () => {
                           <span>{item.label}</span>
                         </div>
 
-                        {item.badge && (
+                        {item.isPlanBadge ? (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-5 px-1.5 text-[9px] font-bold uppercase tracking-wider",
+                              active
+                                ? "border-amber-200/60 bg-amber-400/20 text-amber-200"
+                                : "border-border bg-muted/60 text-muted-foreground group-hover:text-foreground"
+                            )}
+                          >
+                            {subscription.badge || subscription.name}
+                          </Badge>
+                        ) : item.badge ? (
                           <Badge
                             variant={active ? "secondary" : "destructive"}
                             className="h-5 px-1.5 text-[10px] font-bold"
                           >
                             {item.badge}
                           </Badge>
-                        )}
+                        ) : null}
                       </button>
                     );
                   })}
@@ -174,6 +214,51 @@ const Sidebar = () => {
             ))}
           </div>
         </ScrollArea>
+
+        {/* Account Plan & Limits Widget in Left Sidebar */}
+        <div className="px-3 pt-2 pb-1 border-t border-border/50">
+          <div
+            onClick={() => {
+              navigate('/billing');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            className="group p-2.5 rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-burgundy-900/40 dark:hover:border-amber-400/40 cursor-pointer transition-all shadow-xs"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-xs font-bold text-foreground">{subscription.name} Plan</span>
+              </div>
+              <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold">
+                Active
+              </Badge>
+            </div>
+
+            {/* Saree Quota Mini Bar */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Saree SKUs</span>
+                <span className="font-mono font-semibold text-foreground">
+                  {sareesCount} / {(subscription.limits?.sarees || 500).toLocaleString()}
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300",
+                    (sareesCount / (subscription.limits?.sarees || 500)) >= 0.9 ? "bg-red-500" : "bg-burgundy-900 dark:bg-amber-400"
+                  )}
+                  style={{ width: `${Math.min(100, Math.round((sareesCount / (subscription.limits?.sarees || 500)) * 100))}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-burgundy-900 dark:text-amber-300 group-hover:underline">
+              <span>Account Limits & Usage</span>
+              <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+        </div>
 
         {/* Action Button */}
         <div className="p-3 border-t border-border/50">

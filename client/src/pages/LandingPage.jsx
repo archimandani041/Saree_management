@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import PaymentGatewayModal from '../components/common/PaymentGatewayModal';
 
 /* ─── Injected luxury animations & styles ─────────────────────────────────── */
 const STYLES = `
@@ -434,7 +435,8 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     subtitle: 'Single Loom / Boutique',
-    price: '\u20b9249',
+    price: '₹249',
+    amount: 249,
     period: '/month',
     desc: 'For independent saree boutiques & artisans managing exclusive collections.',
     features: [
@@ -446,19 +448,20 @@ const PLANS = [
       'Basic sales & stock analytics',
       'Standard community & email support',
     ],
-    buttonText: 'Start Free Trial',
+    buttonText: 'Proceed to Payment (₹249)',
     buttonClass: 'pro',
   },
   {
     id: 'team',
     name: 'Team',
     subtitle: 'Multi-Loom & Showrooms',
-    price: '\u20b9399',
+    price: '₹399',
+    amount: 399,
     period: '/month',
     desc: 'For active saree brands, weaving cooperatives & fast-growing teams.',
     popular: true,
     features: [
-      'Unlimited Saree designs & color series (A\u2192Z)',
+      'Unlimited Saree designs & color series (A→Z)',
       'AI demand forecasting (7d / 15d / 30d / 60d / 90d)',
       'WhatsApp supplier replenishment trigger',
       'Beam architecture & master weaver ledger',
@@ -467,7 +470,7 @@ const PLANS = [
       'Excel & PDF full ERP ledger exports',
       'Priority WhatsApp & phone support',
     ],
-    buttonText: 'Get Started with Team',
+    buttonText: 'Proceed to Payment (₹399)',
     buttonClass: 'team',
   },
   {
@@ -475,6 +478,7 @@ const PLANS = [
     name: 'Enterprise',
     subtitle: 'Mills & Wholesale Houses',
     price: 'Custom',
+    amount: 999,
     period: '',
     desc: 'For large textile manufacturers, wholesale distributors & multiple branches.',
     enterprise: true,
@@ -812,6 +816,13 @@ export default function LandingPage() {
   const { isAuthenticated } = useAuth();
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [selectedPlanForDemo, setSelectedPlanForDemo] = useState('team');
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState(null);
+
+  const handleOpenPayment = (plan) => {
+    setSelectedPlanForPayment(plan);
+    setPaymentModalOpen(true);
+  };
 
   useEffect(() => {
     if (!document.getElementById('kp-landing-styles')) {
@@ -853,6 +864,13 @@ export default function LandingPage() {
         isOpen={demoModalOpen}
         onClose={() => setDemoModalOpen(false)}
         initialPlan={selectedPlanForDemo}
+      />
+
+      {/* Payment Gateway Modal */}
+      <PaymentGatewayModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        plan={selectedPlanForPayment}
       />
 
       {/* ── Background Orbs (reduced) ── */}
@@ -1402,6 +1420,8 @@ export default function LandingPage() {
             <div
               key={plan.id}
               className={`lp-plan-card ${plan.popular ? 'lp-plan-team' : ''}`}
+              onClick={() => handleOpenPayment(plan)}
+              style={{ cursor: 'pointer' }}
             >
               {plan.popular && (
                 <div className="lp-plan-badge">
@@ -1465,7 +1485,7 @@ export default function LandingPage() {
               <div>
                 {plan.enterprise ? (
                   <button
-                    onClick={() => handleOpenDemo('enterprise')}
+                    onClick={(e) => { e.stopPropagation(); handleOpenPayment(plan); }}
                     style={{
                       width: '100%',
                       background: 'linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #F5C842 100%)',
@@ -1479,19 +1499,19 @@ export default function LandingPage() {
                     onMouseEnter={(e) => e.target.style.opacity = '0.92'}
                     onMouseLeave={(e) => e.target.style.opacity = '1'}
                   >
-                    Contact Us / Talk to Sales &#8594;
+                    Proceed to Payment &#8594;
                   </button>
                 ) : plan.popular ? (
                   <button
-                    onClick={() => goSignUp('team')}
+                    onClick={(e) => { e.stopPropagation(); handleOpenPayment(plan); }}
                     className="lp-btn-primary"
                     style={{ width: '100%', padding: '14px', borderRadius: 50, fontSize: 15 }}
                   >
-                    Start 14-Day Free Trial &#8594;
+                    Proceed to Payment (₹399) &#8594;
                   </button>
                 ) : (
                   <button
-                    onClick={() => goSignUp('pro')}
+                    onClick={(e) => { e.stopPropagation(); handleOpenPayment(plan); }}
                     style={{
                       width: '100%',
                       background: 'rgba(253, 242, 243, 0.05)',
@@ -1504,7 +1524,7 @@ export default function LandingPage() {
                     onMouseEnter={(e) => { e.target.style.borderColor = '#D4AF37'; e.target.style.color = '#D4AF37'; }}
                     onMouseLeave={(e) => { e.target.style.borderColor = 'rgba(253, 242, 243, 0.35)'; e.target.style.color = '#FDF2F3'; }}
                   >
-                    {plan.buttonText} &#8594;
+                    Proceed to Payment (₹249) &#8594;
                   </button>
                 )}
               </div>

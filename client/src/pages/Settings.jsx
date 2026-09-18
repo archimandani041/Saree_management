@@ -3,6 +3,7 @@
  * Application parameters, branding preferences, and default stock thresholds.
  */
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { settingsAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,6 +11,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
+import BillingUsage from './BillingUsage';
 import {
   Settings as SettingsIcon,
   Building2,
@@ -19,10 +21,14 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  Save
+  Save,
+  CreditCard
 } from 'lucide-react';
 
 const Settings = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') === 'billing' ? 'billing' : 'general';
+
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [themeMode, setThemeMode] = useState('light');
@@ -85,7 +91,7 @@ const Settings = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-12">
+    <div className={cn("mx-auto space-y-6 pb-12", currentTab === 'billing' ? "max-w-6xl" : "max-w-3xl")}>
       {/* Header */}
       <div className="pb-2 border-b border-border">
         <div className="flex items-center gap-2.5">
@@ -97,31 +103,64 @@ const Settings = () => {
           </h1>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure shop branding, portal defaults, and warehouse safety threshold buffers.
+          Configure shop branding, portal defaults, warehouse thresholds, and subscription limits.
         </p>
       </div>
 
-      {error && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
+      {/* Tabs Switcher */}
+      <div className="flex items-center gap-6 border-b border-border text-sm font-medium">
+        <button
+          onClick={() => setSearchParams({ tab: 'general' })}
+          className={cn(
+            "flex items-center gap-2 pb-3 relative transition-colors",
+            currentTab === 'general'
+              ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <SettingsIcon className="w-4 h-4" />
+          General Preferences
+        </button>
 
-      {success && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs">
-          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{success}</span>
-        </div>
-      )}
+        <button
+          onClick={() => setSearchParams({ tab: 'billing' })}
+          className={cn(
+            "flex items-center gap-2 pb-3 relative transition-colors",
+            currentTab === 'billing'
+              ? "text-foreground font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <CreditCard className="w-4 h-4" />
+          Billing & Account Limits
+        </button>
+      </div>
 
-      <Card className="border border-border shadow-luxury">
-        <CardHeader className="p-6 pb-4">
-          <CardTitle className="text-lg font-serif">Enterprise Profile</CardTitle>
-          <CardDescription className="text-xs">
-            Global configuration applied to invoices, WhatsApp dispatches, and reports.
-          </CardDescription>
-        </CardHeader>
+      {currentTab === 'billing' ? (
+        <BillingUsage />
+      ) : (
+        <>
+          {error && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{success}</span>
+            </div>
+          )}
+
+          <Card className="border border-border shadow-luxury">
+            <CardHeader className="p-6 pb-4">
+              <CardTitle className="text-lg font-serif">Enterprise Profile</CardTitle>
+              <CardDescription className="text-xs">
+                Global configuration applied to invoices, WhatsApp dispatches, and reports.
+              </CardDescription>
+            </CardHeader>
 
         <CardContent className="p-6 pt-0">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -217,6 +256,8 @@ const Settings = () => {
           </form>
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 };

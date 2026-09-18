@@ -27,6 +27,7 @@ import LowStock from './pages/LowStock';
 import StockHistory from './pages/StockHistory';
 import Settings from './pages/Settings';
 import StockRequests from './pages/StockRequests';
+import BillingUsage from './pages/BillingUsage';
 
 /**
  * RootRoute:
@@ -102,6 +103,15 @@ const AppContent = () => {
                     element={
                       <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <SareeEdit />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/billing"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                        <BillingUsage />
                       </ProtectedRoute>
                     }
                   />
