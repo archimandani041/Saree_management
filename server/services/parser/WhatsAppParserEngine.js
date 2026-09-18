@@ -1,82 +1,138 @@
 /**
  * WhatsAppParserEngine — Main orchestrator.
  *
- * Coordinates all parser services:
- *   NoiseFilter → BlockSplitter → BlockParser → DuplicateChecker
+ * Pipeline:
+ *   NoiseFilter → BlockSplitter → BlockParser → InMessageAnalyzer
  *
- * Returns a complete parse result with entries, duplicates,
- * warnings, confidence scores, and error recovery info.
+ * Design principle (per product spec): ACCURACY & TRACEABILITY OVER AUTOMATION.
+ * Every recognised entry is preserved and returned — duplicates and outlier
+ * codes are TAGGED, never silently removed or merged. The caller (and the user)
+ * can always see exactly what was extracted from the message.
  */
 
 const NoiseFilter = require('./NoiseFilter');
 const BlockSplitter = require('./BlockSplitter');
 const BlockParser = require('./BlockParser');
-const DuplicateChecker = require('./DuplicateChecker');
+const InMessageAnalyzer = require('./InMessageAnalyzer');
+const ShopParser = require('./ShopParser');
 
 /**
- * Parse a raw WhatsApp message into structured entries.
+ * Partition cleaned lines into shop sections. A bare "KP"/"KPR" line switches the
+ * active shop for everything that follows and is itself dropped. Lines before any
+ * shop marker belong to a section with brand=null (the caller supplies the shop).
+ * @returns {Array<{ brand: string|null, lines: string[] }>}
+ */
+const partitionByShop = (lines) => {
+  const sections = [];
+  let current = { brand: null, lines: [] };
+  for (const line of lines) {
+    const shop = ShopParser.parse(line);
+    if (shop) {
+      if (current.lines.length) sections.push(current);
+      current = { brand: shop.brand, lines: [] };
+      continue; // drop the marker line itself
+    }
+    current.lines.push(line);
+  }
+  if (current.lines.length) sections.push(current);
+  return sections.length ? sections : [{ brand: null, lines }];
+};
+
+/**
+ * Parse a raw WhatsApp message into structured, fully-tagged entries.
  * @param {string} rawMessage — the full pasted text
- * @returns {{ entries, duplicateEntries, warnings, totalParsed, totalFailed, totalEntries }}
+ * @returns {{
+ *   entries, warnings, majorityCode, distinctCodes,
+ *   duplicateEntries, invalidBlocks,
+ *   totalParsed, totalFailed, totalEntries, duplicateCount, differentCodeCount
+ * }}
  */
 const parseMessage = (rawMessage) => {
+  const empty = {
+    entries: [], warnings: [], shopsDetected: [], majorityCode: null, distinctCodes: [],
+    duplicateEntries: [], invalidBlocks: [],
+    totalParsed: 0, totalFailed: 0, totalEntries: 0, duplicateCount: 0, differentCodeCount: 0,
+  };
+
   if (!rawMessage?.trim()) {
-    return { entries: [], duplicateEntries: [], warnings: ['Empty message'], totalParsed: 0, totalFailed: 0, totalEntries: 0 };
+    return { ...empty, warnings: ['Empty message'] };
   }
 
-  // 1. Filter noise
+  // 1. Filter noise (timestamps, sender names, emojis, blank lines, …)
   const lines = NoiseFilter.filterLines(rawMessage);
   if (lines.length === 0) {
-    return { entries: [], duplicateEntries: [], warnings: ['No usable content found after filtering noise.'], totalParsed: 0, totalFailed: 0, totalEntries: 0 };
+    return { ...empty, warnings: ['No usable content found after filtering noise.'] };
   }
 
-  // 2. Split into blocks
-  const blocks = BlockSplitter.split(lines);
+  // 2. Partition into shop (KP/KPR) sections so each entry can be shop-tagged.
+  const sections = partitionByShop(lines);
+  const shopsDetected = [...new Set(sections.map((s) => s.brand).filter(Boolean))];
 
-  // 3. Parse each block independently (error recovery: never stop on failure)
-  const allParsed = [];
-  const failed = [];
+  // 3. Split each section into blocks and parse — never stop on a single failure.
+  const parsed = [];
+  const invalidBlocks = [];
+  let blockCounter = 0;
 
-  for (let i = 0; i < blocks.length; i++) {
-    try {
-      const entry = BlockParser.parse(blocks[i]);
-      // Only include if at least one useful field was detected
-      if (entry.beam_name || entry.series_code || entry.colors.length > 0 || entry.stock !== null) {
-        allParsed.push(entry);
-      } else {
-        failed.push({ blockIndex: i, reason: 'No recognizable fields found', lines: blocks[i] });
+  for (const section of sections) {
+    const blocks = BlockSplitter.split(section.lines);
+    for (let i = 0; i < blocks.length; i++) {
+      const idx = blockCounter++;
+      try {
+        const entry = BlockParser.parse(blocks[i]);
+        // Recognisable if it has ANY meaningful field; otherwise keep the raw text
+        // as an explicit "invalid / unrecognised" record so nothing is lost.
+        if (entry.series_code || entry.colors.length > 0 || entry.beam_name || entry.stock !== null) {
+          entry.brand = section.brand; // null when no shop marker — caller supplies it
+          parsed.push(entry);
+        } else {
+          invalidBlocks.push({ blockIndex: idx, raw_text: blocks[i].join('\n'), reason: 'No recognizable sari fields', brand: section.brand });
+        }
+      } catch (err) {
+        invalidBlocks.push({ blockIndex: idx, raw_text: (blocks[i] || []).join('\n'), reason: err.message, brand: section.brand });
       }
-    } catch (err) {
-      failed.push({ blockIndex: i, reason: err.message, lines: blocks[i] });
     }
   }
 
-  // 4. Deduplicate
-  const { unique, duplicates } = DuplicateChecker.dedup(allParsed);
+  // 4. Cross-entry analysis — tag (never drop) in-message duplicates & outlier codes.
+  const analysis = InMessageAnalyzer.analyze(parsed);
 
-  // 5. Generate warnings
+  // 5. Collect warnings: per-entry parse notes + cross-entry findings.
   const warnings = [];
-  unique.forEach((entry, i) => {
-    const prefix = unique.length > 1 ? `Entry ${i + 1}: ` : '';
-    entry.parseErrors.forEach((err) => warnings.push(`${prefix}${err}`));
+  parsed.forEach((entry, i) => {
+    const prefix = parsed.length > 1 ? `Entry ${i + 1}: ` : '';
+    (entry.color_warnings || []).forEach((w) => {
+      warnings.push(`${prefix}Duplicate ${w.f_number} within this combination${w.sameColor ? ' (same colour repeated)' : ` (also "${w.duplicateOfColor}")`}.`);
+    });
   });
-
-  if (failed.length > 0) {
-    warnings.push(`${failed.length} block(s) could not be parsed and were skipped.`);
+  warnings.push(...analysis.warnings);
+  if (invalidBlocks.length > 0) {
+    warnings.push(`${invalidBlocks.length} block(s) could not be recognised — shown as "Invalid" for manual review.`);
   }
 
-  // Clean up internal fields before returning
-  const cleanEntries = unique.map((e) => {
-    const { _rawLines, parseErrors, ...rest } = e;
-    return { ...rest, parseErrors };
+  // 6. Strip internal-only fields before returning.
+  const cleanEntries = parsed.map((e) => {
+    const { _rawLines, ...rest } = e;
+    return rest;
   });
+
+  // Backward-compatible view: the flagged duplicates (kept in `entries` too).
+  const duplicateEntries = cleanEntries
+    .filter((e) => e.duplicate_in_message)
+    .map((e) => ({ entry: e, duplicateOf: e.duplicate_of }));
 
   return {
     entries: cleanEntries,
-    duplicateEntries: duplicates,
     warnings,
-    totalParsed: unique.length,
-    totalFailed: failed.length,
-    totalEntries: unique.length,
+    shopsDetected,
+    majorityCode: analysis.majorityCode,
+    distinctCodes: analysis.distinctCodes,
+    duplicateEntries,
+    invalidBlocks,
+    totalParsed: cleanEntries.length,
+    totalFailed: invalidBlocks.length,
+    totalEntries: cleanEntries.length,
+    duplicateCount: analysis.duplicateCount,
+    differentCodeCount: analysis.differentCodeCount,
   };
 };
 

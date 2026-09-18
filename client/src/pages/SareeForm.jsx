@@ -23,7 +23,6 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import CombinationImageUpload from '../components/common/CombinationImageUpload';
 import WhatsAppImportDialog from '../components/common/WhatsAppImportDialog';
-import PageHeader from '../components/common/PageHeader';
 
 // ── A single F-color row ──────────────────────────────────────────
 const ColorRow = ({ color, index, onChange, onRemove, isDuplicate }) => (
@@ -215,7 +214,6 @@ const SareeForm = () => {
         setPrice(s.price != null ? String(s.price) : '');
         setDescription(s.description || '');
         setImageUrl(s.image_url || '');
-        setStatus(s.status || 'In Stock');
         setBrand(s.brand || 'KP');
 
         let loadedBeams = [];
@@ -624,7 +622,6 @@ const SareeForm = () => {
       if (existSareeCheckQueue.length > 0) {
         setSareeExistQueue(existSareeCheckQueue);
         setActiveSareeExist(existSareeCheckQueue[0]);
-        setPreviewOpen(false); // Close preview to show conflict resolver
         return;
       }
 
@@ -879,17 +876,19 @@ const SareeForm = () => {
 
   return (
     <Box>
-      <PageHeader
-        title={isEdit ? 'Edit Saree' : 'Add New Saree'}
-        subtitle="Create hierarchical inventory collections: Saree → Beams → Combinations → F-Colors"
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Inventory', href: '/sarees' }, { label: isEdit ? 'Edit' : 'Add' }]}
-        icon={<IconButton onClick={() => navigate('/sarees')} color="primary" sx={{ p: 0.5, mr: 1 }}><ArrowBack /></IconButton>}
-        actions={<>
-          <Button startIcon={<WhatsAppIcon />} variant="outlined" color="success" onClick={() => setPasteOpen(true)} size="small">
-            Paste WhatsApp
-          </Button>
-        </>}
-      />
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+        <IconButton onClick={() => navigate('/sarees')} color="primary"><ArrowBack /></IconButton>
+        <Box flex={1}>
+          <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
+            {isEdit ? 'Edit Saree' : 'Add New Saree'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">Hierarchical: Saree → Beams → Combinations → F-Colors</Typography>
+        </Box>
+        <Button startIcon={<WhatsAppIcon />} variant="outlined" color="success" onClick={() => setPasteOpen(true)}>
+          Paste WhatsApp
+        </Button>
+      </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
@@ -913,9 +912,9 @@ const SareeForm = () => {
                     onChange={e => { setSeriesLetter(e.target.value.toUpperCase()); setSeriesCodeError(false); }} slotProps={{ htmlInput: { maxLength: 2 } }} />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 2 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Brand</InputLabel>
-                    <Select value={brand} label="Brand" onChange={e => setBrand(e.target.value)}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Shop</InputLabel>
+                    <Select value={brand} label="Shop" onChange={e => setBrand(e.target.value)}>
                       <MenuItem value="KP">KP</MenuItem>
                       <MenuItem value="KPR">KPR</MenuItem>
                     </Select>
@@ -1014,6 +1013,7 @@ const SareeForm = () => {
         onClose={() => setPasteOpen(false)}
         onImport={handleWhatsAppImport}
         currentSeriesBase={seriesBase}
+        currentBrand={brand}
       />
 
       {/* Duplicate Resolution Dialog */}

@@ -179,5 +179,38 @@ const register = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/auth/users
+ * List all users in system (admin only)
+ */
+const getUsers = async (req, res) => {
+  try {
+    const ownerId = req.user.owner_id;
 
-module.exports = { login, logout, getMe, register };
+    // Scope to the caller's tenant: staff rows carry owner_id === ownerId,
+    // and the owner's own row is matched by id === ownerId.
+    let { data: users, error } = await supabase
+      .from('users')
+      .select('id, username, email, role, full_name, is_active, created_at')
+      .or(`owner_id.eq.${ownerId},id.eq.${ownerId}`)
+      .order('created_at', { ascending: false });
+
+    // Legacy fallback: if the owner_id column doesn't exist yet (migration not
+    // run), return only the caller's own record rather than leaking all tenants.
+    if (error && (error.code === '42703' || error.message?.includes('owner_id'))) {
+      ({ data: users, error } = await supabase
+        .from('users')
+        .select('id, username, email, role, full_name, is_active, created_at')
+        .eq('id', ownerId)
+        .order('created_at', { ascending: false }));
+    }
+
+    if (error) throw error;
+    res.json({ users: users || [] });
+  } catch (error) {
+    console.error('GetUsers error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+};
+
+module.exports = { login, logout, getMe, register, getUsers };

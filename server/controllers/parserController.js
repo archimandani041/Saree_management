@@ -6,6 +6,7 @@
  */
 const { supabase } = require('../config/supabase');
 const { parseMessage } = require('../services/parser/WhatsAppParserEngine');
+const { transcribeImage, isConfigured: ocrConfigured } = require('../services/OcrService');
 
 // ────────────────────────────────────────────────────────────────────────────────
 // POST /api/parser/whatsapp  (authenticated — manual paste from UI)
@@ -19,7 +20,8 @@ const parseWhatsAppMessage = (req, res) => {
 
     const result = parseMessage(message);
 
-    if (result.entries.length === 0) {
+    // Only reject when there is truly nothing to show — including invalid blocks.
+    if (result.entries.length === 0 && result.invalidBlocks.length === 0) {
       return res.status(422).json({
         error: result.warnings.length > 0
           ? result.warnings.join(' ')
@@ -30,7 +32,13 @@ const parseWhatsAppMessage = (req, res) => {
     res.json({
       entries: result.entries,
       duplicateEntries: result.duplicateEntries,
+      invalidBlocks: result.invalidBlocks,
       warnings: result.warnings,
+      shopsDetected: result.shopsDetected,
+      majorityCode: result.majorityCode,
+      distinctCodes: result.distinctCodes,
+      duplicateCount: result.duplicateCount,
+      differentCodeCount: result.differentCodeCount,
       totalEntries: result.totalEntries,
       totalParsed: result.totalParsed,
       totalFailed: result.totalFailed,
@@ -270,4 +278,26 @@ const handleWhatsAppWebhook = async (req, res) => {
   }
 };
 
-module.exports = { parseWhatsAppMessage, handleWhatsAppWebhook };
+// ────────────────────────────────────────────────────────────────────────────────
+// POST /api/parser/ocr  (authenticated — WhatsApp screenshot → raw text)
+// Multipart field "image". Returns the transcribed text; the client then runs it
+// through the SAME parse+validate pipeline as pasted text.
+// ────────────────────────────────────────────────────────────────────────────────
+const ocrWhatsAppImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded. Attach a screenshot as "image".' });
+    }
+    const text = await transcribeImage(req.file.buffer, req.file.mimetype);
+    res.json({ text });
+  } catch (error) {
+    const status = error.statusCode || 500;
+    if (status >= 500 && status !== 501 && status !== 502) console.error('OCR error:', error);
+    res.status(status).json({ error: error.message || 'Failed to read text from the image.' });
+  }
+};
+
+// GET /api/parser/ocr-status — lets the UI show/hide the screenshot button.
+const ocrStatus = (req, res) => res.json({ enabled: ocrConfigured() });
+
+module.exports = { parseWhatsAppMessage, handleWhatsAppWebhook, ocrWhatsAppImage, ocrStatus };

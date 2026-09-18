@@ -15,10 +15,10 @@ const {
 // POST /api/duplicates/check-saree
 const checkSareeEndpoint = async (req, res) => {
   try {
-    const { series_code, exclude_id } = req.body;
+    const { series_code, exclude_id, brand } = req.body;
     if (!series_code?.trim())
       return res.status(400).json({ error: 'series_code is required' });
-    const result = await checkSaree(series_code, req.user.owner_id, exclude_id || null);
+    const result = await checkSaree(series_code, req.user.owner_id, exclude_id || null, brand || null);
     res.json(result);
   } catch (e) {
     console.error('checkSaree error:', e);
@@ -62,10 +62,10 @@ const checkCombinationEndpoint = async (req, res) => {
 // POST /api/duplicates/check-whatsapp-batch
 const checkWhatsAppBatchEndpoint = async (req, res) => {
   try {
-    const { entries } = req.body;
+    const { entries, brand } = req.body;
     if (!Array.isArray(entries) || entries.length === 0)
       return res.status(400).json({ error: 'entries array is required' });
-    const results = await checkWhatsAppBatch(entries, req.user.owner_id);
+    const results = await checkWhatsAppBatch(entries, req.user.owner_id, brand || null);
     res.json({ results });
   } catch (e) {
     console.error('checkWhatsAppBatch error:', e);

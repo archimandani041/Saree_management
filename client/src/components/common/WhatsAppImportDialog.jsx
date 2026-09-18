@@ -12,7 +12,7 @@
  *   - Select/unselect entries
  *   - Expandable F-color detail view
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { parserAPI, duplicateAPI } from '../../services/api';
 import {
   Box, Paper, TextField, Button, Typography, IconButton,
@@ -31,6 +31,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 
 // ── Confidence badge ────────────────────────────────────────────
 const ConfidenceBadge = ({ score }) => {
@@ -44,24 +46,40 @@ const ConfidenceBadge = ({ score }) => {
   );
 };
 
-// ── Duplicate status badge ───────────────────────────────────────
-const STATUS_BADGE = {
-  NEW:            { label: 'NEW',       color: '#16A34A', bg: '#F0FDF4' },
-  NEW_SAREE:      { label: 'NEW',       color: '#16A34A', bg: '#F0FDF4' },
-  NEW_BEAM:       { label: 'NEW',       color: '#16A34A', bg: '#F0FDF4' },
-  UPDATE:         { label: 'UPDATE',    color: '#2563EB', bg: '#EFF6FF' },
-  DUPLICATE:      { label: 'DUPLICATE', color: '#DC2626', bg: '#FEF2F2' },
-  SIMILAR:        { label: 'SIMILAR',   color: '#D97706', bg: '#FFFBEB' },
-  IMAGE_CONFLICT: { label: 'IMAGE',     color: '#7C3AED', bg: '#F5F3FF' },
-  CHECKING:       { label: '...',       color: '#6B7280', bg: '#F9FAFB' },
+// ── Canonical status taxonomy (mirrors the server — spec §11) ────────────────
+const STATUS_CONFIG = {
+  NEW_SARI:             { label: '🆕 New Sari',            color: '#16A34A', bg: '#F0FDF4' },
+  NEW_COMBINATION:      { label: '🆕 New Combination',     color: '#0D9488', bg: '#F0FDFA' },
+  SARI_EXISTS:          { label: '⚠️ Sari Exists',          color: '#D97706', bg: '#FFFBEB' },
+  COMBINATION_EXISTS:   { label: '⚠️ Combination Exists',   color: '#DC2626', bg: '#FEF2F2' },
+  SIMILAR:              { label: '⚠️ Similar',              color: '#D97706', bg: '#FFFBEB' },
+  DUPLICATE_IN_MESSAGE: { label: '⚠️ Duplicate in Message', color: '#DC2626', bg: '#FEF2F2' },
+  MISSING_INFO:         { label: '⚠️ Missing Info',         color: '#D97706', bg: '#FFFBEB' },
+  INVALID:              { label: '❌ Invalid',              color: '#6B7280', bg: '#F3F4F6' },
+  CHECKING:             { label: '… checking',             color: '#6B7280', bg: '#F9FAFB' },
+  // legacy fallthroughs (older server responses)
+  NEW: { label: '🆕 New', color: '#16A34A', bg: '#F0FDF4' },
+};
+const STATUS_HELP = {
+  NEW_SARI: 'This sari code is not in the database yet — you can add it.',
+  NEW_COMBINATION: 'This sari already exists; this beam/combination is new to it.',
+  SARI_EXISTS: 'This sari already exists in the database.',
+  COMBINATION_EXISTS: 'This exact combination & colours already exist in the database.',
+  SIMILAR: 'A very similar combination already exists — please review.',
+  DUPLICATE_IN_MESSAGE: 'This entry is repeated earlier in the pasted message.',
+  MISSING_INFO: 'Some fields could not be confidently identified — please correct them.',
+  INVALID: 'No recognisable sari information could be extracted from this block.',
 };
 const StatusBadge = ({ status }) => {
-  const cfg = STATUS_BADGE[status] || STATUS_BADGE.NEW;
-  return (
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.NEW_SARI;
+  const badge = (
     <Chip label={cfg.label} size="small"
-      sx={{ height: 20, fontSize: '0.6rem', fontWeight: 800,
+      sx={{ height: 22, fontSize: '0.62rem', fontWeight: 800, maxWidth: '100%',
         color: cfg.color, bgcolor: cfg.bg, border: `1px solid ${cfg.color}44` }} />
   );
+  return STATUS_HELP[status]
+    ? <Tooltip title={STATUS_HELP[status]}>{badge}</Tooltip>
+    : badge;
 };
 
 // ── Inline edit row ─────────────────────────────────────────────
@@ -160,20 +178,57 @@ const ColorDetail = ({ colors }) => {
 // ════════════════════════════════════════════════════════════════
 // Main Component
 // ════════════════════════════════════════════════════════════════
-const WhatsAppImportDialog = ({ open, onClose, onImport, currentSeriesBase }) => {
+const WhatsAppImportDialog = ({ open, onClose, onImport, currentSeriesBase, currentBrand }) => {
   // Step 1: Paste
   const [pasteText, setPasteText] = useState('');
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState('');
 
+  // Screenshot / OCR
+  const [ocrEnabled, setOcrEnabled] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Ask the server whether OCR (Gemini) is configured, to show/hide the button.
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    parserAPI.ocrStatus()
+      .then(({ data }) => { if (active) setOcrEnabled(!!data.enabled); })
+      .catch(() => { if (active) setOcrEnabled(false); });
+    return () => { active = false; };
+  }, [open]);
+
+  const handleScreenshot = async (e) => {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = ''; // allow re-selecting same file
+    if (!file) return;
+    setParseError('');
+    setOcrLoading(true);
+    try {
+      const { data } = await parserAPI.ocrImage(file);
+      const text = (data.text || '').trim();
+      if (!text) { setParseError('No text could be read from the screenshot.'); return; }
+      // Append to any existing pasted text so multiple screenshots accumulate.
+      setPasteText((prev) => (prev.trim() ? `${prev.trim()}\n${text}` : text));
+    } catch (err) {
+      setParseError(err.response?.data?.error || 'Failed to read text from the screenshot.');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
   // Step 2: Preview
   const [step, setStep] = useState('paste');
   const [entries, setEntries] = useState([]);
   const [duplicateEntries, setDuplicateEntries] = useState([]);
+  const [invalidBlocks, setInvalidBlocks] = useState([]);
   const [warnings, setWarnings] = useState([]);
+  const [majorityCode, setMajorityCode] = useState(null);
+  const [counts, setCounts] = useState({ duplicate: 0, different: 0 });
   const [stats, setStats] = useState({ parsed: 0, failed: 0 });
   const [selected, setSelected] = useState([]);
-  const [dupStatuses, setDupStatuses] = useState({}); // index → status string
+  const [dupResults, setDupResults] = useState([]); // index → full batch result { status, existingSareeName, diff, ... }
   const [dupChecking, setDupChecking] = useState(false);
 
   // Expanded rows
@@ -186,10 +241,13 @@ const WhatsAppImportDialog = ({ open, onClose, onImport, currentSeriesBase }) =>
     setStep('paste');
     setEntries([]);
     setDuplicateEntries([]);
+    setInvalidBlocks([]);
     setWarnings([]);
+    setMajorityCode(null);
+    setCounts({ duplicate: 0, different: 0 });
     setStats({ parsed: 0, failed: 0 });
     setSelected([]);
-    setDupStatuses({});
+    setDupResults([]);
     setDupChecking(false);
     setExpandedRows(new Set());
   };
@@ -200,31 +258,42 @@ const WhatsAppImportDialog = ({ open, onClose, onImport, currentSeriesBase }) =>
   };
 
   // ── Parse + duplicate batch check ────────────────────────────
+  const runBatchCheck = async (parsedEntries) => {
+    setDupChecking(true);
+    try {
+      // Scope DB duplicate detection to the shop being imported into. A per-entry
+      // shop parsed from KP/KPR headers overrides this on the server.
+      const { data: batchData } = await duplicateAPI.checkWhatsAppBatch({ entries: parsedEntries, brand: currentBrand || null });
+      // Align results to entries by index (server preserves order 1:1).
+      setDupResults(batchData.results || []);
+    } catch { /* non-fatal — statuses simply stay unknown */ } finally {
+      setDupChecking(false);
+    }
+  };
+
   const handleParse = async () => {
     setParseError('');
     setParsing(true);
-    setDupStatuses({});
+    setDupResults([]);
     try {
       const { data } = await parserAPI.parseWhatsApp(pasteText);
       const parsedEntries = data.entries || [];
-      if (parsedEntries.length === 0) {
+      const invalids = data.invalidBlocks || [];
+      if (parsedEntries.length === 0 && invalids.length === 0) {
         setParseError('Could not parse any entries from the message.');
         return;
       }
       setEntries(parsedEntries);
       setDuplicateEntries(data.duplicateEntries || []);
+      setInvalidBlocks(invalids);
       setWarnings(data.warnings || []);
-      setStats({ parsed: data.totalParsed || parsedEntries.length, failed: data.totalFailed || 0 });
-      setSelected(parsedEntries.map((_, i) => i));
+      setMajorityCode(data.majorityCode || null);
+      setCounts({ duplicate: data.duplicateCount || 0, different: data.differentCodeCount || 0 });
+      setStats({ parsed: data.totalParsed || parsedEntries.length, failed: data.totalFailed || invalids.length });
+      // Pre-select everything EXCEPT in-message duplicates (kept but unchecked by default).
+      setSelected(parsedEntries.map((e, i) => (e.duplicate_in_message ? null : i)).filter((i) => i !== null));
       setStep('preview');
-      // Run batch duplicate check in background
-      setDupChecking(true);
-      try {
-        const { data: batchData } = await duplicateAPI.checkWhatsAppBatch({ entries: parsedEntries });
-        const statusMap = {};
-        (batchData.results || []).forEach((r, i) => { statusMap[i] = r.status; });
-        setDupStatuses(statusMap);
-      } catch { /* non-fatal */ } finally { setDupChecking(false); }
+      if (parsedEntries.length > 0) await runBatchCheck(parsedEntries);
     } catch (e) {
       setParseError(e.response?.data?.error || 'Could not parse message. Please check the format.');
     } finally {
@@ -245,12 +314,15 @@ const WhatsAppImportDialog = ({ open, onClose, onImport, currentSeriesBase }) =>
     if (updated.stock !== null && updated.stock !== undefined) score += 20;
     next[index].confidence = score;
     setEntries(next);
+    // Re-validate against the DB since identity fields may have changed.
+    runBatchCheck(next);
   };
 
   // ── Delete entry ──────────────────────────────────────────────
   const handleDeleteEntry = (index) => {
     const next = entries.filter((_, i) => i !== index);
     setEntries(next);
+    setDupResults((prev) => prev.filter((_, i) => i !== index));
     setSelected(selected.filter((s) => s !== index).map((s) => (s > index ? s - 1 : s)));
   };
 
@@ -358,7 +430,31 @@ F-3 : Silver Filatex
               }}
             />
 
-            {parsing && <LinearProgress sx={{ mt: 1.5, borderRadius: 2 }} />}
+            {ocrEnabled && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleScreenshot}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={ocrLoading || parsing}
+                  startIcon={<ImageOutlinedIcon />}
+                  sx={{ mt: 1.5, textTransform: 'none', borderColor: 'rgba(37,211,102,0.4)', color: '#128C7E' }}
+                >
+                  {ocrLoading ? 'Reading screenshot…' : 'Upload WhatsApp screenshot'}
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  The screenshot is transcribed to text, then parsed with the same rules — review everything before importing.
+                </Typography>
+              </>
+            )}
+
+            {(parsing || ocrLoading) && <LinearProgress sx={{ mt: 1.5, borderRadius: 2 }} />}
             {parseError && <Alert severity="error" sx={{ mt: 1.5 }}>{parseError}</Alert>}
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
@@ -366,7 +462,7 @@ F-3 : Silver Filatex
             <Button
               variant="contained"
               onClick={handleParse}
-              disabled={!pasteText.trim() || parsing}
+              disabled={!pasteText.trim() || parsing || ocrLoading}
               startIcon={<AutoFixHighIcon />}
               sx={{
                 background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
@@ -429,14 +525,50 @@ F-3 : Silver Filatex
               </Box>
             )}
 
-            {/* Duplicate blocks */}
-            {duplicateEntries.length > 0 && (
+            {/* In-message duplicates (KEPT, not removed — user decides) */}
+            {counts.duplicate > 0 && (
               <Box sx={{ p: 2, pb: 0 }}>
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    {duplicateEntries.length} duplicate block{duplicateEntries.length !== 1 ? 's were' : ' was'} detected
-                    and automatically removed from the preview.
+                <Alert severity="warning" icon={<WarningIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {counts.duplicate} duplicate {counts.duplicate === 1 ? 'entry' : 'entries'} detected inside this message.
                   </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    They are kept and highlighted below (unchecked by default) so nothing is lost — you decide whether to import them.
+                  </Typography>
+                </Alert>
+              </Box>
+            )}
+
+            {/* Different / outlier sari codes */}
+            {counts.different > 0 && majorityCode && (
+              <Box sx={{ p: 2, pb: 0 }}>
+                <Alert severity="warning" icon={<WarningIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {counts.different} entr{counts.different === 1 ? 'y has a' : 'ies have a'} different sari code
+                    from the main code <strong>{majorityCode}</strong>.
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Highlighted below and kept for your review — nothing was auto-removed or modified.
+                  </Typography>
+                </Alert>
+              </Box>
+            )}
+
+            {/* Invalid / unrecognised blocks (never silently dropped) */}
+            {invalidBlocks.length > 0 && (
+              <Box sx={{ p: 2, pb: 0 }}>
+                <Alert severity="info" icon={<ErrorIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {invalidBlocks.length} block{invalidBlocks.length !== 1 ? 's' : ''} could not be recognised as a sari.
+                  </Typography>
+                  {invalidBlocks.map((b, i) => (
+                    <Typography key={i} variant="caption" sx={{
+                      display: 'block', fontFamily: 'monospace', color: 'text.secondary',
+                      whiteSpace: 'pre-wrap', mt: 0.25,
+                    }}>
+                      • {b.raw_text}
+                    </Typography>
+                  ))}
                 </Alert>
               </Box>
             )}
@@ -473,6 +605,10 @@ F-3 : Silver Filatex
                       entry.series_base &&
                       entry.series_base.toUpperCase() !== currentSeriesBase.toUpperCase();
                     const isLowConf = entry.confidence < 80;
+                    const isDuplicate = !!entry.duplicate_in_message;
+                    const isDifferent = !!entry.different_code;
+                    const missing = entry.missing_fields || [];
+                    const status = dupChecking ? 'CHECKING' : (dupResults[idx]?.status || 'NEW_SARI');
 
                     return (
                       <TableRow
@@ -480,13 +616,13 @@ F-3 : Silver Filatex
                         hover
                         selected={isChecked}
                         sx={{
-                          ...(isMismatch && {
-                            bgcolor: 'rgba(220, 38, 38, 0.04)',
-                            '&:hover': { bgcolor: 'rgba(220, 38, 38, 0.08)' },
+                          ...((isMismatch || isDuplicate) && {
+                            bgcolor: 'rgba(220, 38, 38, 0.05)',
+                            '&:hover': { bgcolor: 'rgba(220, 38, 38, 0.09)' },
                           }),
-                          ...(isLowConf && !isMismatch && {
-                            bgcolor: 'rgba(217, 119, 6, 0.04)',
-                            '&:hover': { bgcolor: 'rgba(217, 119, 6, 0.08)' },
+                          ...((isDifferent || (isLowConf && !isMismatch && !isDuplicate)) && !isMismatch && !isDuplicate && {
+                            bgcolor: 'rgba(217, 119, 6, 0.05)',
+                            '&:hover': { bgcolor: 'rgba(217, 119, 6, 0.09)' },
                           }),
                         }}
                       >
@@ -495,17 +631,31 @@ F-3 : Silver Filatex
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {entry.beam_name || <span style={{ color: '#DC2626' }}>—</span>}
+                            {entry.beam_name || <span style={{ color: '#D97706' }}>—</span>}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            label={entry.series_code || '—'}
-                            size="small"
-                            variant="outlined"
-                            color={isMismatch ? 'error' : 'default'}
-                            sx={{ fontWeight: 700, fontSize: '0.7rem' }}
-                          />
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4, alignItems: 'flex-start' }}>
+                            <Chip
+                              label={entry.series_code || '—'}
+                              size="small"
+                              variant="outlined"
+                              color={isMismatch || isDifferent ? 'error' : 'default'}
+                              sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+                            />
+                            {entry.brand && (
+                              <Tooltip title={`Shop: ${entry.brand}`}>
+                                <Chip label={entry.brand} size="small"
+                                  sx={{ height: 16, fontSize: '0.55rem', fontWeight: 800, color: '#6D28D9', bgcolor: '#F5F3FF', border: '1px solid #6D28D944' }} />
+                              </Tooltip>
+                            )}
+                            {isDifferent && (
+                              <Tooltip title={`Different from the main code ${majorityCode || ''}`}>
+                                <Chip label="Different code" size="small"
+                                  sx={{ height: 16, fontSize: '0.55rem', fontWeight: 800, color: '#B45309', bgcolor: '#FFFBEB', border: '1px solid #B4530944' }} />
+                              </Tooltip>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
@@ -514,20 +664,46 @@ F-3 : Silver Filatex
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                            {entry.stock != null ? `${entry.stock}` : <span style={{ color: '#DC2626' }}>—</span>}
+                            {entry.stock != null ? `${entry.stock}` : <span style={{ color: '#D97706' }}>—</span>}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <ColorDetail colors={entry.colors} />
+                          {entry.color_warnings?.length > 0 && (
+                            <Tooltip title={entry.color_warnings.map((w) => `Duplicate ${w.f_number}`).join(', ')}>
+                              <Chip label={`⚠ dup F`} size="small"
+                                sx={{ height: 16, fontSize: '0.55rem', fontWeight: 800, color: '#DC2626', bgcolor: '#FEF2F2', mt: 0.3 }} />
+                            </Tooltip>
+                          )}
                         </TableCell>
                         <TableCell align="center">
                           <ConfidenceBadge score={entry.confidence} />
                         </TableCell>
                         <TableCell align="center">
-                          <StatusBadge status={dupChecking ? 'CHECKING' : (dupStatuses[idx] || 'NEW')} />
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4, alignItems: 'center' }}>
+                            <StatusBadge status={status} />
+                            {missing.length > 0 && (
+                              <Tooltip title={`Unable to confidently identify: ${missing.join(', ')}`}>
+                                <Chip label={`missing: ${missing.join(', ')}`} size="small"
+                                  sx={{ height: 16, fontSize: '0.52rem', fontWeight: 700, color: '#B45309', bgcolor: '#FFFBEB', maxWidth: 140 }} />
+                              </Tooltip>
+                            )}
+                            {dupResults[idx]?.existingSareeName && (status === 'SARI_EXISTS' || status === 'NEW_COMBINATION' || status === 'COMBINATION_EXISTS') && (
+                              <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.secondary' }}>
+                                in DB: {dupResults[idx].existingSareeName}
+                              </Typography>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell align="center">
                           <Box sx={{ display: 'flex', gap: 0.25, justifyContent: 'center' }}>
+                            {entry.raw_text && (
+                              <Tooltip title={<span style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.7rem' }}>{entry.raw_text}</span>}>
+                                <IconButton size="small">
+                                  <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             <InlineEditRow entry={entry} index={idx} onUpdate={handleUpdateEntry} />
                             <Tooltip title="Remove">
                               <IconButton size="small" color="error" onClick={() => handleDeleteEntry(idx)}>

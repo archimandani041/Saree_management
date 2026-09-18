@@ -2,6 +2,10 @@
  * Supabase Configuration
  * Initializes the Supabase client for database and storage operations
  */
+const path = require('path');
+require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const { createClient } = require('@supabase/supabase-js');
 
 const cleanEnvVar = (val) => {

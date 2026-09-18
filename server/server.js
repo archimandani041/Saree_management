@@ -9,7 +9,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Trust proxy - needed for express-rate-limit to correctly read req.ip
 // Without this, req.ip can be undefined, causing ERR_ERL_UNDEFINED_IP_ADDRESS (500 errors)
