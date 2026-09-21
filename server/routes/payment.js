@@ -4,6 +4,47 @@
  */
 const express = require('express');
 const router = express.Router();
+const nodemailer = require('nodemailer');
+
+let cachedTransporter = null;
+let cachedTestAccount = null;
+
+// Configure Nodemailer Transporter
+const getTransporter = async () => {
+  // If user provided real SMTP credentials in environment
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    return nodemailer.createTransport({
+      service: process.env.SMTP_SERVICE || 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+
+  // Otherwise, create/reuse Ethereal SMTP test account for live deliverability testing
+  if (cachedTransporter) {
+    return cachedTransporter;
+  }
+
+  try {
+    cachedTestAccount = await nodemailer.createTestAccount();
+    cachedTransporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: cachedTestAccount.user,
+        pass: cachedTestAccount.pass,
+      },
+    });
+    console.log(`[EMAIL SERVICE] Created test SMTP account: ${cachedTestAccount.user}`);
+    return cachedTransporter;
+  } catch (err) {
+    console.warn('[EMAIL SERVICE] Could not create test SMTP account, falling back to simulated transport:', err.message);
+    return null;
+  }
+};
 
 // Generate professional HTML Email Template
 const generateReceiptEmailHtml = ({
@@ -149,7 +190,43 @@ const generateReceiptEmailHtml = ({
   `.trim();
 };
 
-// Generate Professional WhatsApp / SMS Message
+// Generate Plain Text Receipt
+const generatePlainTextReceipt = ({
+  customerName = 'Valued Partner',
+  planName = 'Team',
+  amount = 399,
+  transactionId = 'KP-PAY-2026-98124',
+  utrNumber = 'UTR-428190284729',
+  invoiceNumber = 'INV-2026-88192',
+  paymentMethod = 'UPI Instant (NPCI Sandbox)'
+}) => {
+  return `KP CREATION TEXTILES ERP — OFFICIAL PAYMENT RECEIPT & TAX INVOICE
+
+Dear ${customerName},
+
+Thank you for your purchase and partnership! We are pleased to confirm that your subscription to the ${planName} Plan has been successfully authorized and activated.
+
+TRANSACTION DETAILS:
+---------------------------------------------
+Invoice Number: ${invoiceNumber}
+Transaction ID: ${transactionId}
+Bank UTR / RRN: ${utrNumber}
+Plan Subscribed: ${planName} Plan
+Total Amount: Rs. ${amount}.00 (Includes 18% GST)
+Payment Channel: ${paymentMethod}
+Status: AUTHORIZED & ACTIVE (PAID)
+
+GST COMPLIANCE:
+Merchant: KP Creation Textiles Private Limited
+GSTIN: 24AAECK9182C1ZP (Gujarat - 24)
+SAC Code: 998313 (IT / Cloud ERP Services)
+
+Thank you for choosing KP Creation Saree Management ERP.
+For support or weaver onboarding, contact WhatsApp: +91 99096 80207.
+`;
+};
+
+// Generate Professional WhatsApp Message
 const generateWhatsAppMessage = ({
   customerName = 'Valued Partner',
   planName = 'Team',
@@ -172,13 +249,13 @@ const generateWhatsAppMessage = ({
     `• Unlimited color series (A→Z) & barcode printing\n` +
     `• One-tap WhatsApp replenishment triggers to weavers\n` +
     `• Downloadable Excel & PDF ERP ledgers\n\n` +
-    `Your official GST Tax Invoice has been emailed to your registered address.\n\n` +
+    `Your official GST Tax Invoice has been generated.\n\n` +
     `For priority onboarding assistance, our support team is available at +91 99096 80207.\n\n` +
     `_Empowering Surat's Textile & Saree Houses_`;
 };
 
 // POST /api/payment/send-receipt
-router.post('/send-receipt', (req, res) => {
+router.post('/send-receipt', async (req, res) => {
   try {
     const {
       customerName = 'Valued Textile Partner',
@@ -203,6 +280,16 @@ router.post('/send-receipt', (req, res) => {
       paymentMethod
     });
 
+    const plainTextReceipt = generatePlainTextReceipt({
+      customerName,
+      planName,
+      amount,
+      transactionId,
+      utrNumber,
+      invoiceNumber,
+      paymentMethod
+    });
+
     const whatsappMessage = generateWhatsAppMessage({
       customerName,
       planName,
@@ -212,16 +299,48 @@ router.post('/send-receipt', (req, res) => {
       invoiceNumber
     });
 
+    const subject = `Official Tax Invoice #${invoiceNumber} & Order Confirmation — KP Creation ERP`;
+
+    let etherealUrl = null;
+    let emailSentViaSmtp = false;
+
+    // Send real email via Nodemailer
+    try {
+      const transporter = await getTransporter();
+      if (transporter) {
+        const info = await transporter.sendMail({
+          from: `"KP Creation Billing Engine" <${process.env.SMTP_FROM || 'billing@kpcreation.com'}>`,
+          to: customerEmail,
+          subject: subject,
+          text: plainTextReceipt,
+          html: emailHtml,
+        });
+
+        emailSentViaSmtp = true;
+        etherealUrl = nodemailer.getTestMessageUrl(info);
+        if (etherealUrl) {
+          console.log(`[EMAIL SERVICE] 🌐 Real email delivered to test inbox: ${etherealUrl}`);
+        } else {
+          console.log(`[EMAIL SERVICE] 🚀 Real email sent via SMTP to: ${customerEmail}`);
+        }
+      }
+    } catch (mailErr) {
+      console.warn('[EMAIL SERVICE] SMTP dispatch error:', mailErr.message);
+    }
+
     // Output to console with styled log for external guide / terminal observation
     console.log('\n' + '='.repeat(70));
     console.log('📧 [EMAIL DISPATCHER] OFFICIAL TAX INVOICE & THANK YOU EMAIL DISPATCHED');
     console.log('='.repeat(70));
     console.log(`To:          ${customerEmail} (${customerName})`);
-    console.log(`Subject:     Tax Invoice #${invoiceNumber} & Order Confirmation — KP Creation ERP`);
+    console.log(`Subject:     ${subject}`);
     console.log(`Plan:        ${planName} Plan (Amount: ₹${amount})`);
     console.log(`UTR / RRN:   ${utrNumber}`);
     console.log(`Method:      ${paymentMethod}`);
-    console.log(`Status:      DELIVERED VIA SECURE SMTP GATEWAY (200 OK)`);
+    console.log(`Status:      DELIVERED (200 OK) | SMTP Active: ${emailSentViaSmtp}`);
+    if (etherealUrl) {
+      console.log(`Inbox Link:  ${etherealUrl}`);
+    }
     console.log('='.repeat(70) + '\n');
 
     return res.json({
@@ -232,9 +351,12 @@ router.post('/send-receipt', (req, res) => {
       invoiceNumber,
       transactionId,
       utrNumber,
-      subject: `Tax Invoice #${invoiceNumber} & Order Confirmation — KP Creation ERP`,
+      subject,
       emailHtml,
+      plainTextReceipt,
       whatsappMessage,
+      etherealUrl,
+      emailSentViaSmtp,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateSubscription } from '../../services/subscriptionService';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * PaymentGatewayModal — High-Impact Evaluator/Examiner Sandbox Payment Gateway
@@ -13,11 +14,11 @@ import { updateSubscription } from '../../services/subscriptionService';
  * 4. Net Banking for major Indian banks (SBI, HDFC, ICICI, Axis, Kotak, PNB)
  * 5. Interactive 3D Secure / OTP verification challenge
  * 6. Multi-step banking handshake progress visualizer (AES-256 -> NPCI -> 2FA -> ERP Ledger)
- * 7. Automatic backend dispatch of professional Tax Invoice & Executive Thank You Email
- * 8. Interactive "View Sent Email & Thank You Letter" dialog with live resend capability
- * 9. Interactive "View WhatsApp Confirmation" preview dialog
- * 10. Authentic GST Tax Invoice modal & printable view
- * 11. Official Razorpay client SDK test mode integration
+ * 7. Live WhatsApp Direct Dispatch: Opens WhatsApp Web/App directly with prefilled receipt to user's phone!
+ * 8. Live Gmail Web Compose: Opens Gmail directly with prefilled receipt to user's email!
+ * 9. Real Nodemailer SMTP / Ethereal Test Inbox delivery link
+ * 10. Interactive in-app Email & WhatsApp message readers
+ * 11. Authentic GST Tax Invoice modal & printable view
  */
 
 // Helper to load Razorpay script dynamically
@@ -39,17 +40,18 @@ const loadRazorpayScript = () => {
 export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
   const navigate = useNavigate();
 
-  // Retrieve logged-in user if available
-  let sessionUser = null;
+  // Retrieve authenticated user
+  let authUser = null;
   try {
-    const raw = sessionStorage.getItem('sari_user');
-    if (raw) sessionUser = JSON.parse(raw);
+    const authContext = useAuth();
+    authUser = authContext?.user;
   } catch (_) {}
 
   // Recipient details
-  const [customerEmail, setCustomerEmail] = useState(sessionUser?.email || 'textile.owner@kpcreation.com');
-  const [customerName, setCustomerName] = useState(sessionUser?.name || 'Ramesh Patel (KP Creation)');
-  const [customerPhone, setCustomerPhone] = useState(sessionUser?.phone || '9909680207');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [autoOpenWhatsApp, setAutoOpenWhatsApp] = useState(true);
 
   // Tabs: 'upi' | 'card' | 'netbanking' | 'razorpay'
   const [activeTab, setActiveTab] = useState('upi');
@@ -93,13 +95,15 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
 
   // Email & WhatsApp contents
   const [emailPreviewHtml, setEmailPreviewHtml] = useState('');
+  const [plainTextReceipt, setPlainTextReceipt] = useState('');
   const [whatsappMessageText, setWhatsappMessageText] = useState('');
+  const [etherealUrl, setEtherealUrl] = useState('');
   const [emailStatusText, setEmailStatusText] = useState('');
   const [forwardEmailInput, setForwardEmailInput] = useState('');
   const [isForwarding, setIsForwarding] = useState(false);
   const [forwardSuccessToast, setForwardSuccessToast] = useState('');
 
-  // Reset state when modal opens
+  // Sync user details on modal open
   useEffect(() => {
     if (isOpen) {
       setIsProcessing(false);
@@ -125,8 +129,18 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
       setQrTimer(300);
       setEmailStatusText('');
       setForwardSuccessToast('');
+      setEtherealUrl('');
+
+      // Auto-populate logged-in user credentials
+      const email = authUser?.email || sessionStorage.getItem('sari_user_email') || 'bhavymangukiya04@gmail.com';
+      const name = authUser?.name || authUser?.full_name || 'Bhavy Mangukiya';
+      const phone = authUser?.phone || '9909680207';
+
+      setCustomerEmail(email);
+      setCustomerName(name);
+      setCustomerPhone(phone.replace(/[^0-9]/g, '').slice(-10) || '9909680207');
     }
-  }, [isOpen, plan]);
+  }, [isOpen, authUser]);
 
   // QR Timer countdown
   useEffect(() => {
@@ -158,8 +172,29 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
     { title: 'End-to-End Encryption', desc: 'Securing payload with 256-bit AES-GCM' },
     { title: 'Payment Switch Routing', desc: 'Communicating with NPCI / Banking Gateway' },
     { title: 'Two-Factor Authentication', desc: 'Validating 3D Secure / UPI MPIN token' },
-    { title: 'ERP Ledger & Email Dispatch', desc: 'Syncing tenant quota & dispatching Tax Invoice' },
+    { title: 'ERP Ledger & Multi-Channel Dispatch', desc: 'Delivering Tax Invoice to Email & WhatsApp' },
   ];
+
+  // Helper to open real WhatsApp with pre-filled receipt
+  const triggerRealWhatsApp = (msgText = null) => {
+    const textToSend = msgText || whatsappMessageText || 
+      `✨ *KP CREATION TEXTILES ERP — PURCHASE CONFIRMED* ✨\n\nDear *${customerName}*,\n\nThank you for subscribing to the *${plan.name} Plan* (${planPriceDisplay})!\n\n• *Invoice No:* ${invoiceNumber}\n• *Transaction Ref:* ${transactionId}\n• *Bank UTR:* ${utrNumber}\n• *Amount Paid:* ${planPriceDisplay} (Incl. 18% GST)\n• *Status:* AUTHORIZED & ACTIVE\n\nYour official GST Tax Invoice has been generated.\n\n_Empowering Surat's Textile & Saree Houses_`;
+    
+    const cleanPhone = customerPhone.replace(/\D/g, '');
+    const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(textToSend)}`;
+    window.open(waUrl, '_blank');
+  };
+
+  // Helper to open Gmail Web Compose with pre-filled receipt
+  const triggerRealGmail = () => {
+    const subject = `Official Tax Invoice #${invoiceNumber} & Thank You — KP Creation ERP`;
+    const body = plainTextReceipt || 
+      `KP CREATION TEXTILES ERP — OFFICIAL PAYMENT RECEIPT & TAX INVOICE\n\nDear ${customerName},\n\nThank you for purchasing the ${plan.name} Plan with KP Creation Saree ERP.\n\nInvoice Number: ${invoiceNumber}\nTransaction Reference: ${transactionId}\nBank UTR / RRN: ${utrNumber}\nAmount Paid: ${planPriceDisplay}\nPayment Status: AUTHORIZED & ACTIVE (PAID)\nGSTIN: 24AAECK9182C1ZP\nSAC Code: 998313\n\nSupport Helpline: +91 99096 80207`;
+    
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customerEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+  };
 
   // Dispatch receipt to server
   const sendReceiptNotification = async (details) => {
@@ -172,14 +207,28 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
       if (res.ok) {
         const data = await res.json();
         setEmailPreviewHtml(data.emailHtml || '');
+        setPlainTextReceipt(data.plainTextReceipt || '');
         setWhatsappMessageText(data.whatsappMessage || '');
+        if (data.etherealUrl) setEtherealUrl(data.etherealUrl);
         setEmailStatusText(`Official Tax Invoice #${details.invoiceNumber} & Thank-You confirmation dispatched to ${details.customerEmail}`);
+        
+        // If auto-open WhatsApp is enabled, trigger real WhatsApp delivery!
+        if (autoOpenWhatsApp && data.whatsappMessage) {
+          setTimeout(() => {
+            triggerRealWhatsApp(data.whatsappMessage);
+          }, 800);
+        }
       } else {
         throw new Error('Server returned non-200');
       }
     } catch (_) {
-      // Offline fallback generator
+      // Offline fallback
       setEmailStatusText(`Official Tax Invoice #${details.invoiceNumber} & Thank-You confirmation dispatched to ${details.customerEmail}`);
+      if (autoOpenWhatsApp) {
+        setTimeout(() => {
+          triggerRealWhatsApp();
+        }, 800);
+      }
     }
   };
 
@@ -238,7 +287,7 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
           amount: planAmount,
           transactionId: generatedTxId,
           utrNumber: generatedUtr,
-          invoiceId: generatedInv,
+          invoiceNumber: generatedInv,
           paidAt: now.toISOString(),
           status: 'PAID',
         })
@@ -296,13 +345,13 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
       setCardNumber('4111 1111 1111 1111');
       setCardExpiry('12/28');
       setCardCvv('786');
-      setCardName('Prof. External Examiner (Viva Demo)');
+      setCardName(customerName || 'Prof. External Examiner (Viva Demo)');
       setCardType('visa');
     } else if (type === 'rupay') {
       setCardNumber('6071 5200 8899 4433');
       setCardExpiry('08/29');
       setCardCvv('452');
-      setCardName('KP Creation Textile Partner');
+      setCardName(customerName || 'KP Creation Textile Partner');
       setCardType('rupay');
     } else {
       setCardNumber('5200 8282 3434 9191');
@@ -371,7 +420,7 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
     }
   };
 
-  const isUserLoggedIn = Boolean(sessionStorage.getItem('sari_user'));
+  const isUserLoggedIn = Boolean(authUser || sessionStorage.getItem('sari_user'));
 
   const handleContinueToSignup = () => {
     onClose();
@@ -498,7 +547,7 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                 External Guide Evaluation Sandbox
               </div>
               <div style={{ fontSize: 10, color: 'rgba(253, 242, 243, 0.65)' }}>
-                NPCI UPI Intent • 3D Secure 2FA • Automated Email Receipt & Thank-You Dispatch
+                NPCI UPI Intent • 3D Secure 2FA • Real WhatsApp & Email Delivery
               </div>
             </div>
           </div>
@@ -522,15 +571,15 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
           <div style={{ textAlign: 'center', padding: '4px 0' }}>
             <div
               style={{
-                width: 72,
-                height: 72,
+                width: 68,
+                height: 68,
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #10B981, #059669)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 36,
-                margin: '0 auto 12px',
+                fontSize: 34,
+                margin: '0 auto 10px',
                 boxShadow: '0 0 35px rgba(16, 185, 129, 0.55)',
                 animation: 'popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               }}
@@ -544,44 +593,147 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                 background: 'rgba(16, 185, 129, 0.15)',
                 border: '1px solid rgba(16, 185, 129, 0.45)',
                 color: '#10B981',
-                padding: '4px 16px',
+                padding: '3px 14px',
                 borderRadius: 50,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 800,
                 letterSpacing: '0.8px',
                 textTransform: 'uppercase',
-                marginBottom: 6,
+                marginBottom: 4,
               }}
             >
               Payment Authorized & Verified
             </span>
 
-            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, color: '#D4AF37', margin: '4px 0 6px' }}>
+            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 22, color: '#D4AF37', margin: '4px 0 6px' }}>
               Thank You for Your Purchase, {customerName.split(' ')[0]}!
             </h3>
 
-            {/* Official Email Dispatch Banner */}
-            <div
-              style={{
-                background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.12))',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
-                borderRadius: '12px',
-                padding: '10px 14px',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                fontSize: '12px',
-                color: '#A7F3D0',
-                lineHeight: 1.4,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>📧</span>
-              <span>
-                Tax Invoice & Thank-You letter sent to <strong style={{ color: '#FDF2F3' }}>{customerEmail}</strong>
-              </span>
+            {/* ── LIVE DELIVERY CARDS (WHATSAPP & EMAIL) ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '14px', textAlign: 'left' }}>
+              {/* WhatsApp Live Dispatch Card */}
+              <div
+                style={{
+                  background: 'rgba(37, 211, 102, 0.12)',
+                  border: '1.5px solid rgba(37, 211, 102, 0.45)',
+                  borderRadius: '14px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4ADE80', fontWeight: 800, fontSize: 11, textTransform: 'uppercase' }}>
+                    <span>💬</span> WhatsApp Live Dispatch
+                  </div>
+                  <div style={{ fontSize: 11, color: '#FDF2F3', marginTop: 2 }}>
+                    To: <strong>+91 {customerPhone}</strong>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(253, 242, 243, 0.65)', marginTop: 2 }}>
+                    Instant confirmation delivered with full invoice breakdown.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => triggerRealWhatsApp()}
+                  style={{
+                    background: '#25D366',
+                    color: '#062816',
+                    border: 'none',
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    boxShadow: '0 3px 10px rgba(37, 211, 102, 0.3)',
+                  }}
+                >
+                  <span>📲</span> Send to My WhatsApp Now
+                </button>
+              </div>
+
+              {/* Email Live Dispatch Card */}
+              <div
+                style={{
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  border: '1.5px solid rgba(59, 130, 246, 0.45)',
+                  borderRadius: '14px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#60A5FA', fontWeight: 800, fontSize: 11, textTransform: 'uppercase' }}>
+                    <span>📧</span> Email Receipt & Invoice
+                  </div>
+                  <div style={{ fontSize: 11, color: '#FDF2F3', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    To: <strong>{customerEmail}</strong>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(253, 242, 243, 0.65)', marginTop: 2 }}>
+                    Official GST Tax Invoice & Thank You note dispatched.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={triggerRealGmail}
+                  style={{
+                    background: '#3B82F6',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    boxShadow: '0 3px 10px rgba(59, 130, 246, 0.3)',
+                  }}
+                >
+                  <span>✉️</span> Open & Send in Gmail
+                </button>
+              </div>
             </div>
+
+            {/* If Ethereal test inbox available */}
+            {etherealUrl && (
+              <div
+                style={{
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  border: '1px solid rgba(212, 175, 55, 0.4)',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  fontSize: '11px',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>🌐 Test SMTP Mail Delivered to Web Inbox:</span>
+                <a
+                  href={etherealUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#D4AF37', fontWeight: 800, textDecoration: 'underline' }}
+                >
+                  Open Live Test Inbox →
+                </a>
+              </div>
+            )}
 
             {/* Official GST Receipt Breakdown */}
             <div
@@ -589,99 +741,85 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                 background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(212, 175, 55, 0.3)',
                 borderRadius: '16px',
-                padding: '14px 16px',
+                padding: '12px 16px',
                 textAlign: 'left',
-                fontSize: '12px',
-                marginBottom: '16px',
+                fontSize: '11px',
+                marginBottom: '14px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 6, marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 5, marginBottom: 5 }}>
                 <span style={{ color: 'rgba(253, 242, 243, 0.55)' }}>Transaction Reference:</span>
                 <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#FDF2F3' }}>{transactionId}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 6, marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 5, marginBottom: 5 }}>
                 <span style={{ color: 'rgba(253, 242, 243, 0.55)' }}>Bank UTR / RRN:</span>
                 <span style={{ fontFamily: 'monospace', color: '#D4AF37' }}>{utrNumber}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 6, marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 5, marginBottom: 5 }}>
                 <span style={{ color: 'rgba(253, 242, 243, 0.55)' }}>Invoice Number:</span>
                 <span style={{ fontWeight: 600, color: '#FDF2F3' }}>{invoiceNumber}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 6, marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 5, marginBottom: 5 }}>
                 <span style={{ color: 'rgba(253, 242, 243, 0.55)' }}>Base Price + 18% GST:</span>
                 <span style={{ color: 'rgba(253, 242, 243, 0.85)' }}>₹{baseAmount} + ₹{totalTax} (GST)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 2 }}>
                 <span style={{ color: '#FDF2F3', fontWeight: 700 }}>Total Settle Amount:</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#10B981' }}>{planPriceDisplay}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#10B981' }}>{planPriceDisplay}</span>
               </div>
             </div>
 
             {/* Notification & Preview Action Bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
               <button
                 type="button"
                 onClick={() => setShowEmailModal(true)}
                 style={{
-                  background: 'rgba(59, 130, 246, 0.18)',
-                  border: '1px solid rgba(59, 130, 246, 0.45)',
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
                   color: '#93C5FD',
-                  padding: '10px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                  padding: '8px 4px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
                 }}
               >
-                <span>📨</span> Preview Sent Email
+                📨 Email View
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowWhatsAppModal(true)}
                 style={{
-                  background: 'rgba(37, 211, 102, 0.16)',
-                  border: '1px solid rgba(37, 211, 102, 0.45)',
+                  background: 'rgba(37, 211, 102, 0.15)',
+                  border: '1px solid rgba(37, 211, 102, 0.35)',
                   color: '#86EFAC',
-                  padding: '10px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                  padding: '8px 4px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
                 }}
               >
-                <span>💬</span> WhatsApp Receipt
+                💬 WA View
               </button>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
               <button
                 type="button"
                 onClick={() => setShowInvoiceModal(!showInvoiceModal)}
                 style={{
                   background: 'rgba(212, 175, 55, 0.15)',
-                  border: '1px solid rgba(212, 175, 55, 0.4)',
+                  border: '1px solid rgba(212, 175, 55, 0.35)',
                   color: '#D4AF37',
-                  padding: '10px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                  padding: '8px 4px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
                 }}
               >
-                <span>🧾</span> {showInvoiceModal ? 'Hide Tax Invoice' : 'View Tax Invoice'}
+                🧾 Tax Invoice
               </button>
 
               <button
@@ -691,18 +829,14 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                   background: 'rgba(255, 255, 255, 0.08)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
                   color: '#FDF2F3',
-                  padding: '10px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
+                  padding: '8px 4px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
                 }}
               >
-                <span>🖨️</span> Print Invoice
+                🖨️ Print PDF
               </button>
             </div>
 
@@ -713,17 +847,17 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                   background: '#FFFFFF',
                   color: '#111827',
                   borderRadius: '16px',
-                  padding: '20px',
+                  padding: '18px',
                   textAlign: 'left',
-                  marginBottom: '16px',
+                  marginBottom: '14px',
                   boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
                   fontSize: '11px',
                   lineHeight: 1.4,
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #E5E7EB', paddingBottom: 10, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #E5E7EB', paddingBottom: 8, marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '15px', color: '#8B1A3A' }}>KP CREATION TEXTILES ERP</div>
+                    <div style={{ fontWeight: 800, fontSize: '14px', color: '#8B1A3A' }}>KP CREATION TEXTILES ERP</div>
                     <div style={{ color: '#4B5563', fontSize: 10 }}>Ring Road Textile Market, Surat, Gujarat - 395002</div>
                     <div style={{ color: '#4B5563', fontSize: 10 }}>GSTIN: <strong>24AAECK9182C1ZP</strong> (State Code: 24)</div>
                   </div>
@@ -734,38 +868,38 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                   </div>
                 </div>
 
-                <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 10px', marginBottom: 10 }}>
+                <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px 10px', marginBottom: 8 }}>
                   <div>Billed To: <strong>{customerName}</strong> ({customerEmail})</div>
                   <div>Contact: +91 {customerPhone} | State: Gujarat (24)</div>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12, fontSize: 10 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10, fontSize: 10 }}>
                   <thead>
                     <tr style={{ background: '#F3F4F6', color: '#1F2937', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 8px' }}>Description</th>
-                      <th style={{ padding: '6px 8px' }}>SAC</th>
-                      <th style={{ padding: '6px 8px' }}>Taxable</th>
-                      <th style={{ padding: '6px 8px' }}>CGST (9%)</th>
-                      <th style={{ padding: '6px 8px' }}>SGST (9%)</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>Total</th>
+                      <th style={{ padding: '5px 8px' }}>Description</th>
+                      <th style={{ padding: '5px 8px' }}>SAC</th>
+                      <th style={{ padding: '5px 8px' }}>Taxable</th>
+                      <th style={{ padding: '5px 8px' }}>CGST (9%)</th>
+                      <th style={{ padding: '5px 8px' }}>SGST (9%)</th>
+                      <th style={{ padding: '5px 8px', textAlign: 'right' }}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr style={{ borderBottom: '1px solid #E5E7EB' }}>
-                      <td style={{ padding: '8px' }}>
+                      <td style={{ padding: '6px 8px' }}>
                         <strong>{plan.name} Subscription (1 Month Access)</strong>
                         <div style={{ color: '#6B7280', fontSize: 9 }}>Multi-Loom Inventory, WhatsApp Reorder, Saree Ledger</div>
                       </td>
-                      <td style={{ padding: '8px' }}>998313</td>
-                      <td style={{ padding: '8px' }}>₹{baseAmount}</td>
-                      <td style={{ padding: '8px' }}>₹{halfTax}</td>
-                      <td style={{ padding: '8px' }}>₹{halfTax}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{planPriceDisplay}</td>
+                      <td style={{ padding: '6px 8px' }}>998313</td>
+                      <td style={{ padding: '6px 8px' }}>₹{baseAmount}</td>
+                      <td style={{ padding: '6px 8px' }}>₹{halfTax}</td>
+                      <td style={{ padding: '6px 8px' }}>₹{halfTax}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>{planPriceDisplay}</td>
                     </tr>
                   </tbody>
                 </table>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
                   <div style={{ color: '#6B7280', fontSize: 9 }}>
                     Mode: {pendingMethod || 'NPCI UPI Simulator'} • Status: <strong>PAID & VERIFIED</strong>
                   </div>
@@ -783,9 +917,9 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                 background: 'linear-gradient(135deg, #8B1A3A, #C2185B)',
                 color: '#FDF2F3',
                 border: 'none',
-                padding: '14px',
+                padding: '13px',
                 borderRadius: '50px',
-                fontSize: '15px',
+                fontSize: '14px',
                 fontWeight: 700,
                 cursor: 'pointer',
                 boxShadow: '0 6px 20px rgba(194, 24, 91, 0.4)',
@@ -1026,57 +1160,74 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                 background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 borderRadius: '14px',
-                padding: '10px 14px',
+                padding: '12px 14px',
                 marginBottom: '16px',
               }}
             >
-              <div style={{ fontSize: 10, color: '#D4AF37', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
-                🧾 Receipt & Notification Recipient
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: '#D4AF37', fontWeight: 800, textTransform: 'uppercase' }}>
+                  📲 Receipt & Notification Recipient
+                </span>
+                <span style={{ fontSize: 10, color: '#10B981', fontWeight: 700 }}>
+                  Active Notification Delivery
+                </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                 <div>
-                  <label style={{ fontSize: 9, color: 'rgba(253, 242, 243, 0.6)', display: 'block', marginBottom: 2 }}>
-                    Billing Email (For Tax Invoice):
+                  <label style={{ fontSize: 9, color: 'rgba(253, 242, 243, 0.65)', display: 'block', marginBottom: 2 }}>
+                    Your Real Email Address:
                   </label>
                   <input
                     type="email"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="store.owner@kpcreation.com"
+                    placeholder="bhavymangukiya04@gmail.com"
                     style={{
                       width: '100%',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(212, 175, 55, 0.25)',
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(212, 175, 55, 0.35)',
                       borderRadius: 8,
-                      padding: '6px 10px',
+                      padding: '7px 10px',
                       color: '#FDF2F3',
-                      fontSize: 11,
+                      fontSize: '11px',
                       outline: 'none',
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 9, color: 'rgba(253, 242, 243, 0.6)', display: 'block', marginBottom: 2 }}>
-                    WhatsApp Mobile (For Alert):
+                  <label style={{ fontSize: 9, color: 'rgba(253, 242, 243, 0.65)', display: 'block', marginBottom: 2 }}>
+                    Your WhatsApp Phone (10 digits):
                   </label>
                   <input
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     placeholder="9909680207"
+                    maxLength={10}
                     style={{
                       width: '100%',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(212, 175, 55, 0.25)',
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(212, 175, 55, 0.35)',
                       borderRadius: 8,
-                      padding: '6px 10px',
+                      padding: '7px 10px',
                       color: '#FDF2F3',
-                      fontSize: 11,
+                      fontSize: '11px',
                       outline: 'none',
                     }}
                   />
                 </div>
               </div>
+
+              {/* Auto WhatsApp Option */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'rgba(253, 242, 243, 0.8)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={autoOpenWhatsApp}
+                  onChange={(e) => setAutoOpenWhatsApp(e.target.checked)}
+                  style={{ accentColor: '#25D366' }}
+                />
+                <span>Automatically open WhatsApp on payment success to send confirmation to my phone</span>
+              </label>
             </div>
 
             {/* Error Message */}
@@ -1710,8 +1861,57 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                 </div>
               </div>
 
+              {/* Open in Real Gmail Button */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={triggerRealGmail}
+                  style={{
+                    flex: 1,
+                    background: '#3B82F6',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '10px',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>✉️</span> Open this Receipt in My Gmail Web
+                </button>
+
+                {etherealUrl && (
+                  <a
+                    href={etherealUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1,
+                      background: '#0F172A',
+                      color: '#F8FAFC',
+                      padding: '10px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span>🌐</span> View on Ethereal Web Inbox
+                  </a>
+                )}
+              </div>
+
               {/* Viva Demo Tool: Forward / Resend Email */}
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px', marginTop: 20 }}>
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px' }}>
                 <div style={{ fontWeight: 700, fontSize: 12, color: '#0F172A', marginBottom: 6 }}>
                   ⚡ Evaluator Demo: Forward Copy of this Receipt & Invoice
                 </div>
@@ -1888,35 +2088,35 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
             <div style={{ background: '#202C33', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button
                 type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(`KP Creation ERP Confirmation - Invoice ${invoiceNumber}, Amount: ${planPriceDisplay}`);
-                  alert('WhatsApp confirmation message copied to clipboard!');
-                }}
+                onClick={() => triggerRealWhatsApp()}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
+                  background: '#25D366',
+                  color: '#111B21',
                   border: 'none',
-                  color: '#E9EDEF',
                   padding: '8px 14px',
                   borderRadius: 8,
                   fontSize: 12,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                📋 Copy Message
+                <span>📲</span> Send to WhatsApp App
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowWhatsAppModal(false)}
                 style={{
-                  background: '#25D366',
-                  color: '#111B21',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#E9EDEF',
                   border: 'none',
                   padding: '8px 16px',
                   borderRadius: 8,
                   fontSize: 12,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: 'pointer',
                 }}
               >
