@@ -1414,6 +1414,78 @@ export default function LandingPage() {
           </p>
         </div>
 
+        {/* Evaluator Viva Demonstration Banner */}
+        <div
+          style={{
+            maxWidth: 860,
+            margin: '0 auto 42px',
+            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(139, 26, 58, 0.24) 100%)',
+            border: '1.5px solid rgba(212, 175, 55, 0.45)',
+            borderRadius: 22,
+            padding: '22px 26px',
+            boxShadow: '0 16px 45px rgba(0,0,0,0.6), 0 0 30px rgba(212, 175, 55, 0.12)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
+            position: 'relative',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <span style={{ fontSize: 32 }}>🎓</span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <h4 style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, fontWeight: 700, color: '#D4AF37', margin: 0 }}>
+                    External Guide & Evaluator Payment Gateway Sandbox
+                  </h4>
+                  <span style={{ background: '#10B981', color: '#062816', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 20 }}>
+                    VIVA READY
+                  </span>
+                </div>
+                <p style={{ fontSize: 13, color: 'rgba(253, 242, 243, 0.75)', margin: '6px 0 0', lineHeight: 1.5, maxWidth: 540 }}>
+                  Demonstrate complete end-to-end checkout: <strong>UPI QR Scanner simulation</strong>, <strong>1-click Visa & RuPay card autofill</strong>, <strong>3D Secure OTP verification</strong>, and <strong>GST Tax Invoice generation</strong>.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleOpenPayment(PLANS.find((p) => p.id === 'team') || PLANS[1])}
+              style={{
+                background: 'linear-gradient(135deg, #10B981, #059669)',
+                color: '#062816',
+                border: 'none',
+                padding: '13px 24px',
+                borderRadius: 50,
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 6px 22px rgba(16, 185, 129, 0.4)',
+                whiteSpace: 'nowrap',
+                transition: 'transform 0.2s',
+              }}
+              onMouseEnter={(e) => e.target.style.transform = 'scale(1.03)'}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <span>⚡</span> Launch Gateway Demo (Team Plan ₹399) →
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 10, fontSize: 11, color: 'rgba(253, 242, 243, 0.6)' }}>
+            <span>🔒 AES-256 GCM Handshake</span>
+            <span>•</span>
+            <span>📱 NPCI UPI Intent & QR Radar</span>
+            <span>•</span>
+            <span>💳 3D-Secure 2FA OTP Challenge</span>
+            <span>•</span>
+            <span>🧾 HSN/SAC 998313 GST Tax Invoice</span>
+            <span>•</span>
+            <span>🔄 Instant ERP Quota Sync</span>
+          </div>
+        </div>
+
         {/* 3-Tier Grid */}
         <div className="lp-pricing-grid">
           {PLANS.map((plan) => (
@@ -1463,19 +1535,18 @@ export default function LandingPage() {
                   )}
                 </div>
 
-                <p style={{ color: 'rgba(253, 242, 243, 0.55)', fontSize: 14, lineHeight: 1.6, minHeight: 44, margin: '0 0 24px' }}>
+                <p style={{
+                  color: 'rgba(253, 242, 243, 0.7)',
+                  fontSize: 14, lineHeight: 1.6, margin: '0 0 24px',
+                }}>
                   {plan.desc}
                 </p>
 
-                <div className="lp-divider" style={{ marginBottom: 24 }} />
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 32 }}>
-                  {plan.features.map((feat, fi) => (
-                    <div key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <CheckIcon gold={plan.enterprise || plan.popular} />
-                      <span style={{ color: 'rgba(253, 242, 243, 0.8)', fontSize: 14, lineHeight: 1.45 }}>
-                        {feat}
-                      </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                  {plan.features.map((feature, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13 }}>
+                      <span style={{ color: '#D4AF37', fontSize: 14, flexShrink: 0 }}>&#10003;</span>
+                      <span style={{ color: 'rgba(253, 242, 243, 0.85)', lineHeight: 1.4 }}>{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -1499,7 +1570,7 @@ export default function LandingPage() {
                     onMouseEnter={(e) => e.target.style.opacity = '0.92'}
                     onMouseLeave={(e) => e.target.style.opacity = '1'}
                   >
-                    Proceed to Payment &#8594;
+                    ⚡ Pay with Demo Gateway (Custom) &#8594;
                   </button>
                 ) : plan.popular ? (
                   <button
@@ -1507,7 +1578,7 @@ export default function LandingPage() {
                     className="lp-btn-primary"
                     style={{ width: '100%', padding: '14px', borderRadius: 50, fontSize: 15 }}
                   >
-                    Proceed to Payment (₹399) &#8594;
+                    ⚡ Pay with Demo Gateway (₹399) &#8594;
                   </button>
                 ) : (
                   <button
@@ -1524,7 +1595,7 @@ export default function LandingPage() {
                     onMouseEnter={(e) => { e.target.style.borderColor = '#D4AF37'; e.target.style.color = '#D4AF37'; }}
                     onMouseLeave={(e) => { e.target.style.borderColor = 'rgba(253, 242, 243, 0.35)'; e.target.style.color = '#FDF2F3'; }}
                   >
-                    Proceed to Payment (₹249) &#8594;
+                    ⚡ Pay with Demo Gateway (₹249) &#8594;
                   </button>
                 )}
               </div>
