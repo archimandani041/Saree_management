@@ -207,6 +207,47 @@ export default function AdminAccounts() {
     }
   };
 
+  // Cancel plan from Admin
+  const handleCancelPlan = async (account, immediate = false) => {
+    setActionLoading(true);
+    try {
+      await adminAPI.cancelPlan(account.id, {
+        immediate,
+        reason: 'Cancelled via Super Admin Console'
+      });
+      enqueueSnackbar(`Cancelled ${account.full_name}'s plan subscription.`, {
+        variant: 'info'
+      });
+      if (editModalOpen) setEditModalOpen(false);
+      fetchAccounts();
+    } catch (err) {
+      enqueueSnackbar('Failed to cancel plan: ' + (err.response?.data?.error || err.message), {
+        variant: 'error'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Resume plan from Admin
+  const handleResumePlan = async (account) => {
+    setActionLoading(true);
+    try {
+      await adminAPI.resumePlan(account.id);
+      enqueueSnackbar(`Reactivated ${account.full_name}'s plan subscription!`, {
+        variant: 'success'
+      });
+      if (editModalOpen) setEditModalOpen(false);
+      fetchAccounts();
+    } catch (err) {
+      enqueueSnackbar('Failed to reactivate plan: ' + (err.response?.data?.error || err.message), {
+        variant: 'error'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Create new account
   const handleCreateAccount = async (e) => {
     e.preventDefault();
@@ -339,10 +380,11 @@ export default function AdminAccounts() {
         }
 
         // Status filter
-        if (statusFilter === 'active' && (!acc.is_active || acc.plan?.status === 'SUSPENDED')) return false;
+        if (statusFilter === 'active' && (!acc.is_active || acc.plan?.status === 'SUSPENDED' || acc.plan?.status === 'CANCELLED')) return false;
         if (statusFilter === 'expiring' && (acc.plan?.days_remaining > 7 || acc.plan?.days_remaining <= 0)) return false;
         if (statusFilter === 'expired' && acc.plan?.days_remaining > 0 && acc.plan?.status !== 'EXPIRED') return false;
         if (statusFilter === 'suspended' && acc.is_active && acc.plan?.status !== 'SUSPENDED') return false;
+        if (statusFilter === 'cancelled' && acc.plan?.status !== 'CANCELLED') return false;
 
         return true;
       })
@@ -587,6 +629,7 @@ export default function AdminAccounts() {
             <option value="expiring">Expiring Soon (&le; 7d)</option>
             <option value="expired">Expired / Overdue</option>
             <option value="suspended">Suspended</option>
+            <option value="cancelled">Cancelled</option>
           </select>
 
           {/* Sort By */}
@@ -756,16 +799,27 @@ export default function AdminAccounts() {
 
                       {/* Status */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={cn(
-                              'w-2 h-2 rounded-full',
-                              acc.is_active ? 'bg-emerald-500' : 'bg-rose-500'
-                            )}
-                          />
-                          <span className="font-semibold capitalize text-foreground">
-                            {acc.is_active ? 'Active' : 'Suspended'}
-                          </span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={cn(
+                                'w-2 h-2 rounded-full',
+                                acc.plan?.status === 'CANCELLED'
+                                  ? 'bg-rose-500'
+                                  : acc.is_active
+                                  ? 'bg-emerald-500'
+                                  : 'bg-amber-500'
+                              )}
+                            />
+                            <span className="font-semibold capitalize text-foreground">
+                              {acc.plan?.status === 'CANCELLED' ? 'Cancelled' : acc.is_active ? 'Active' : 'Suspended'}
+                            </span>
+                          </div>
+                          {acc.plan?.status === 'CANCELLED' && (
+                            <span className="text-[10px] text-rose-600 dark:text-rose-400 block font-semibold">
+                              Plan Cancelled
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -784,17 +838,30 @@ export default function AdminAccounts() {
                             Manage
                           </Button>
 
-                          {/* Quick +30 Days Extend */}
-                          <Button
-                            variant="outline"
-                            size="xs"
-                            disabled={actionLoading}
-                            onClick={() => handleQuickExtend(acc, 30)}
-                            className="h-7 px-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
-                            title="Extend plan by +30 days"
-                          >
-                            +30d
-                          </Button>
+                          {/* If Cancelled, show quick Resume button, otherwise show +30d extension */}
+                          {acc.plan?.status === 'CANCELLED' ? (
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              disabled={actionLoading}
+                              onClick={() => handleResumePlan(acc)}
+                              className="h-7 px-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                              title="Reactivate cancelled plan"
+                            >
+                              Resume
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              disabled={actionLoading}
+                              onClick={() => handleQuickExtend(acc, 30)}
+                              className="h-7 px-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                              title="Extend plan by +30 days"
+                            >
+                              +30d
+                            </Button>
+                          )}
 
                           {/* WhatsApp Reminder */}
                           <Button
@@ -945,6 +1012,7 @@ export default function AdminAccounts() {
                     <option value="EXPIRING_SOON">EXPIRING_SOON</option>
                     <option value="EXPIRED">EXPIRED</option>
                     <option value="SUSPENDED">SUSPENDED</option>
+                    <option value="CANCELLED">CANCELLED</option>
                   </select>
                 </div>
 
@@ -990,25 +1058,51 @@ export default function AdminAccounts() {
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditModalOpen(false)}
-                  className="h-9 text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="luxury"
-                  size="sm"
-                  disabled={actionLoading}
-                  className="h-9 text-xs uppercase tracking-wider font-bold shadow-luxury"
-                >
-                  {actionLoading ? 'Saving...' : 'Save Plan & Deadline'}
-                </Button>
+              <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-border">
+                {selectedAccount.plan?.status === 'CANCELLED' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={actionLoading}
+                    onClick={() => handleResumePlan(selectedAccount)}
+                    className="h-9 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 font-semibold"
+                  >
+                    Resume Plan
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={actionLoading}
+                    onClick={() => handleCancelPlan(selectedAccount, false)}
+                    className="h-9 text-xs text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 font-semibold"
+                  >
+                    Cancel Plan
+                  </Button>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditModalOpen(false)}
+                    className="h-9 text-xs"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="luxury"
+                    size="sm"
+                    disabled={actionLoading}
+                    className="h-9 text-xs uppercase tracking-wider font-bold shadow-luxury"
+                  >
+                    {actionLoading ? 'Saving...' : 'Save Plan & Deadline'}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

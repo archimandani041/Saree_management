@@ -112,9 +112,15 @@ export const getActiveSubscription = () => {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (SUBSCRIPTION_PLANS[parsed.planId]) {
+        let daysRemaining = parsed.daysRemaining;
+        if (parsed.renewDate) {
+          const diffMs = new Date(parsed.renewDate).getTime() - new Date().getTime();
+          daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        }
         return {
           ...SUBSCRIPTION_PLANS[parsed.planId],
           ...parsed,
+          daysRemaining: daysRemaining !== undefined ? daysRemaining : 12,
         };
       }
     }
@@ -163,6 +169,11 @@ export const updateSubscription = (planId, paymentDetails = {}) => {
     billingCycle: `${startFormatted} – ${endFormatted}`,
     daysRemaining: 30,
     amount: plan.amount,
+    cancellationPending: false,
+    cancelAtPeriodEnd: false,
+    cancelledAt: null,
+    cancellationReason: null,
+    autoRenew: true,
   };
 
   try {
@@ -191,6 +202,93 @@ export const updateSubscription = (planId, paymentDetails = {}) => {
     ...plan,
     ...updated,
   };
+};
+
+/**
+ * Cancel the current subscription
+ * @param {Object} options
+ * @param {boolean} options.immediate - If true, immediately reverts to free sandbox tier; if false, keeps access until renewDate.
+ * @param {string} options.reason - Reason for cancellation.
+ * @param {string} options.feedback - Optional feedback.
+ */
+export const cancelSubscription = ({ immediate = false, reason = '', feedback = '' } = {}) => {
+  const current = getActiveSubscription();
+  const now = new Date();
+
+  let updated;
+  if (immediate) {
+    const freePlan = SUBSCRIPTION_PLANS.free;
+    updated = {
+      ...current,
+      planId: freePlan.id,
+      name: freePlan.name,
+      badge: freePlan.badge,
+      price: freePlan.price,
+      amount: freePlan.amount,
+      period: freePlan.period,
+      limits: freePlan.limits,
+      features: freePlan.features,
+      status: 'CANCELLED',
+      cancellationPending: false,
+      immediate: true,
+      cancelledAt: now.toISOString(),
+      cancellationReason: reason || 'Immediate cancellation',
+      feedback: feedback || '',
+      autoRenew: false,
+    };
+  } else {
+    updated = {
+      ...current,
+      status: 'CANCELLED',
+      cancellationPending: true,
+      immediate: false,
+      cancelledAt: now.toISOString(),
+      cancellationReason: reason || 'End of billing period cancellation',
+      feedback: feedback || '',
+      autoRenew: false,
+    };
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY_SUBSCRIPTION, JSON.stringify(updated));
+    sessionStorage.setItem('sari_active_subscription', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('sari_subscription_changed', { detail: updated }));
+  } catch (e) {
+    console.error('Failed to cancel subscription:', e);
+  }
+
+  return updated;
+};
+
+/**
+ * Reactivate / Resume a cancelled subscription
+ */
+export const resumeSubscription = () => {
+  const current = getActiveSubscription();
+  const restoredPlanId = current.planId === 'free' ? 'pro' : current.planId;
+  const planDef = SUBSCRIPTION_PLANS[restoredPlanId] || SUBSCRIPTION_PLANS.pro;
+
+  const updated = {
+    ...current,
+    ...planDef,
+    status: 'ACTIVE',
+    cancellationPending: false,
+    immediate: false,
+    cancelledAt: null,
+    cancellationReason: null,
+    feedback: null,
+    autoRenew: true,
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEY_SUBSCRIPTION, JSON.stringify(updated));
+    sessionStorage.setItem('sari_active_subscription', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('sari_subscription_changed', { detail: updated }));
+  } catch (e) {
+    console.error('Failed to resume subscription:', e);
+  }
+
+  return updated;
 };
 
 // Invoices Management

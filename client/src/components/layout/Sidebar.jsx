@@ -270,9 +270,15 @@ const Sidebar = () => {
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                     <span className="text-xs font-bold text-foreground">{subscription.name} Plan</span>
                   </div>
-                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold">
-                    Active
-                  </Badge>
+                  {subscription.status === 'CANCELLED' ? (
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 font-semibold">
+                      Cancelled
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold">
+                      Active
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Saree Quota Mini Bar */}

@@ -365,4 +365,100 @@ router.post('/send-receipt', async (req, res) => {
   }
 });
 
+// POST /api/payment/send-cancellation
+router.post('/send-cancellation', async (req, res) => {
+  try {
+    const {
+      customerName = 'Valued Boutique Partner',
+      customerEmail = 'customer@example.com',
+      planName = 'Pro',
+      immediate = false,
+      reason = 'Not specified',
+      feedback = '',
+      renewDate = '',
+      daysRemaining = 0,
+      phoneNumber = '9909680207',
+    } = req.body;
+
+    const formattedDate = renewDate
+      ? new Date(renewDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'End of current cycle';
+
+    const subject = `Subscription Cancellation Confirmation — KP Creation ERP`;
+
+    const cancellationHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Subscription Cancellation - KP Creation ERP</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1E293B; }
+    .container { max-width: 600px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #E2E8F0; }
+    .header { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); color: #FDF2F3; padding: 32px 28px; text-align: center; }
+    .header h1 { margin: 0 0 8px; font-size: 22px; color: #F1F5F9; }
+    .content { padding: 32px 28px; font-size: 14px; line-height: 1.6; }
+    .box { background: #FEF2F2; border-left: 4px solid #EF4444; padding: 16px 20px; border-radius: 0 10px 10px 0; margin: 20px 0; color: #991B1B; }
+    .details { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; margin: 20px 0; }
+    .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #E2E8F0; font-size: 13px; }
+    .row:last-child { border-bottom: none; }
+    .btn { display: inline-block; background: #8B1A3A; color: #FFFFFF !important; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; }
+    .footer { background: #0F172A; color: #94A3B8; padding: 20px; font-size: 11px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>KP CREATION TEXTILES ERP</h1>
+      <p style="margin: 0; font-size: 12px; opacity: 0.8;">Subscription Management</p>
+    </div>
+    <div class="content">
+      <p>Dear <strong>${customerName}</strong>,</p>
+      <div class="box">
+        <strong>Your ${planName} Plan subscription has been cancelled.</strong><br>
+        ${immediate
+          ? 'Your account has been downgraded immediately to the Free Trial tier.'
+          : `You retain full access to all features until <strong>${formattedDate}</strong> (${daysRemaining} days remaining). No further renewals or charges will occur.`
+        }
+      </div>
+      <div class="details">
+        <div class="row"><span>Plan:</span><strong>${planName} Plan</strong></div>
+        <div class="row"><span>Cancellation Type:</span><strong>${immediate ? 'Immediate' : 'End of Billing Cycle'}</strong></div>
+        <div class="row"><span>Access Valid Until:</span><strong>${immediate ? 'Immediate Free Downgrade' : formattedDate}</strong></div>
+        <div class="row"><span>Reason Recorded:</span><span>${reason}</span></div>
+      </div>
+      <p>If you changed your mind or wish to resume your subscription at any time, you can reactivate with one click from your Billing & Usage settings.</p>
+      <center><a href="http://localhost:5173/billing" class="btn">Reactivate Subscription</a></center>
+    </div>
+    <div class="footer">
+      KP CREATION TEXTILES PRIVATE LIMITED | Ring Road Textile Market, Surat | Support: +91 99096 80207
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    // Log to console for observation
+    console.log('\n' + '='.repeat(70));
+    console.log('🛑 [CANCELLATION DISPATCHER] SUBSCRIPTION CANCELLATION NOTICE');
+    console.log('='.repeat(70));
+    console.log(`Plan:         ${planName}`);
+    console.log(`Customer:     ${customerName} (${customerEmail})`);
+    console.log(`Timing:       ${immediate ? 'Immediate Downgrade' : `Active until ${formattedDate}`}`);
+    console.log(`Reason:       ${reason}`);
+    console.log('='.repeat(70) + '\n');
+
+    return res.json({
+      success: true,
+      message: `Cancellation notice logged for ${customerEmail}`,
+      immediate,
+      formattedDate,
+      cancellationHtml
+    });
+  } catch (error) {
+    console.error('Error handling cancellation notice:', error);
+    return res.status(500).json({ error: 'Failed to process cancellation notification' });
+  }
+});
+
 module.exports = router;

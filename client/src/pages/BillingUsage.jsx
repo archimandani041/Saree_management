@@ -12,9 +12,12 @@ import {
   SUBSCRIPTION_PLANS,
   getActiveSubscription,
   getInvoices,
-  updateSubscription
+  updateSubscription,
+  cancelSubscription,
+  resumeSubscription
 } from '../services/subscriptionService';
 import PaymentGatewayModal from '../components/common/PaymentGatewayModal';
+import CancelPlanModal from '../components/common/CancelPlanModal';
 
 import {
   CreditCard,
@@ -38,7 +41,8 @@ import {
   ChevronRight,
   Lock,
   Printer,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Button } from '../components/ui/button';
@@ -71,6 +75,9 @@ export default function BillingUsage() {
   // Upgrade Modal State
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [targetPlan, setTargetPlan] = useState(null);
+
+  // Cancel Modal State
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
   // Receipt Modal State
   const [receiptInvoice, setReceiptInvoice] = useState(null);
@@ -206,6 +213,13 @@ export default function BillingUsage() {
     }, 400);
   };
 
+  const isCancelled = subscription.status === 'CANCELLED';
+
+  const handleResumeSubscription = () => {
+    const updated = resumeSubscription();
+    setSubscription(updated);
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 pb-16 px-2 sm:px-4">
       {/* Top Breadcrumb Navigation */}
@@ -279,7 +293,7 @@ export default function BillingUsage() {
           {/* Main Plan Card */}
           <div className="rounded-2xl border border-border bg-card/70 p-6 sm:p-7 shadow-xs">
             {/* Header: Plan Icon & Name */}
-            <div className="flex items-center justify-between gap-4 pb-6 border-b border-border/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/60">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-muted border border-border/80 text-foreground">
                   <CreditCard className="w-5 h-5 text-burgundy-900 dark:text-amber-200" />
@@ -289,9 +303,15 @@ export default function BillingUsage() {
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                       {subscription.name}
                     </h2>
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-semibold px-2 py-0.5">
-                      Active
-                    </Badge>
+                    {isCancelled ? (
+                      <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-xs font-semibold px-2 py-0.5">
+                        Cancelled
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-semibold px-2 py-0.5">
+                        Active
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {subscription.subtitle} • {subscription.price}{subscription.period}
@@ -299,15 +319,73 @@ export default function BillingUsage() {
                 </div>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-9 font-semibold hover:border-foreground"
-                onClick={() => handleOpenUpgrade(subscription.id === 'pro' ? 'team' : 'pro')}
-              >
-                Change Plan
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {isCancelled ? (
+                  <Button
+                    variant="luxury"
+                    size="sm"
+                    className="text-xs h-9 font-semibold gap-1.5 shadow-luxury"
+                    onClick={handleResumeSubscription}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Resume Subscription
+                  </Button>
+                ) : (
+                  <>
+                    {subscription.id !== 'free' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-9 font-semibold text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/60"
+                        onClick={() => setCancelModalOpen(true)}
+                      >
+                        Cancel Plan
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-9 font-semibold hover:border-foreground"
+                      onClick={() => handleOpenUpgrade(subscription.id === 'pro' ? 'team' : 'pro')}
+                    >
+                      Change Plan
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* Cancellation Notice Banner if subscription is cancelled */}
+            {isCancelled && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.08] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs my-5">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground text-sm">
+                      {subscription.immediate
+                        ? 'Subscription Cancelled'
+                        : 'Plan Cancellation Scheduled'}
+                    </span>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {subscription.immediate
+                        ? 'Your subscription was cancelled immediately. Your account operates on the Free Trial tier limits (50 Sarees, 2 Collections).'
+                        : `Your ${subscription.name} features will remain active until ${subscription.renewDate ? new Date(subscription.renewDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'renewal deadline'} (${subscription.daysRemaining || 0} days remaining). On this date, auto-renewal will be skipped and your account will downgrade to the Free Trial.`}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="luxury"
+                  size="sm"
+                  className="h-8 px-3 text-xs font-semibold shrink-0 self-start sm:self-auto gap-1.5 shadow-luxury"
+                  onClick={handleResumeSubscription}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reactivate Plan
+                </Button>
+              </div>
+            )}
 
             {/* 4 Quota Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-b border-border/60">
@@ -936,6 +1014,16 @@ export default function BillingUsage() {
           plan={targetPlan}
         />
       )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* CANCEL PLAN MODAL                                                         */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      <CancelPlanModal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        subscription={subscription}
+        onCancelled={(updated) => setSubscription(updated)}
+      />
     </div>
   );
 }

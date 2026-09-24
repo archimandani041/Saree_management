@@ -120,10 +120,53 @@ const createAccount = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/admin/accounts/:id/cancel
+ * Cancel an account's plan
+ */
+const cancelAccountPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { immediate, reason } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const updated = await adminService.cancelAccountPlan(id, { immediate, reason });
+    res.json({ message: 'Account plan cancelled successfully', plan: updated });
+  } catch (error) {
+    console.error('cancelAccountPlan error:', error);
+    res.status(500).json({ error: 'Failed to cancel plan: ' + error.message });
+  }
+};
+
+/**
+ * POST /api/admin/accounts/:id/resume
+ * Reactivate an account's plan
+ */
+const resumeAccountPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const updated = await adminService.resumeAccountPlan(id);
+    res.json({ message: 'Account plan reactivated successfully', plan: updated });
+  } catch (error) {
+    console.error('resumeAccountPlan error:', error);
+    res.status(500).json({ error: 'Failed to reactivate plan: ' + error.message });
+  }
+};
+
 module.exports = {
   getAccounts,
   updateAccountPlan,
   extendDeadline,
   toggleStatus,
   createAccount,
+  cancelAccountPlan,
+  resumeAccountPlan,
 };

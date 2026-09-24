@@ -170,6 +170,8 @@ export const adminAPI = {
   extendDeadline: (id, data) => api.post(`/admin/accounts/${id}/extend`, data),
   toggleStatus: (id, data) => api.put(`/admin/accounts/${id}/status`, data),
   createAccount: (data) => api.post('/admin/accounts', data),
+  cancelPlan: (id, data) => api.post(`/admin/accounts/${id}/cancel`, data),
+  resumePlan: (id) => api.post(`/admin/accounts/${id}/resume`),
 };
 
 export default api;

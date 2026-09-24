@@ -111,6 +111,7 @@ function calculateDaysRemaining(renewDateStr) {
 
 // Determine plan status based on expiration and explicit override
 function resolvePlanStatus(explicitStatus, daysRemaining) {
+  if (explicitStatus === 'CANCELLED') return 'CANCELLED';
   if (explicitStatus === 'SUSPENDED') return 'SUSPENDED';
   if (daysRemaining <= 0) return 'EXPIRED';
   if (daysRemaining <= 7) return 'EXPIRING_SOON';
@@ -310,6 +311,7 @@ async function getAllAccounts() {
   const expiringSoon = accounts.filter((a) => a.plan.days_remaining <= 7 && a.plan.days_remaining > 0).length;
   const expiredCount = accounts.filter((a) => a.plan.days_remaining <= 0 || a.plan.status === 'EXPIRED').length;
   const suspendedCount = accounts.filter((a) => !a.is_active || a.plan.status === 'SUSPENDED').length;
+  const cancelledCount = accounts.filter((a) => a.plan.status === 'CANCELLED').length;
 
   const planBreakdown = {
     free: accounts.filter((a) => a.plan.id === 'free').length,
@@ -327,6 +329,7 @@ async function getAllAccounts() {
       expiring_soon: expiringSoon,
       expired_count: expiredCount,
       suspended_count: suspendedCount,
+      cancelled_count: cancelledCount,
       plan_breakdown: planBreakdown,
     },
     available_plans: SUBSCRIPTION_PLANS,
@@ -513,6 +516,94 @@ async function createAccount({ email, password, full_name, username, role, planI
   };
 }
 
+/**
+ * Cancel an account's plan (immediate downgrade or scheduled at renewDate)
+ */
+async function cancelAccountPlan(userId, { immediate = false, reason = '' } = {}) {
+  const localData = readLocalPlanData();
+  const current = localData[userId] || {};
+
+  let targetPlanId = current.planId || 'pro';
+  if (immediate) {
+    targetPlanId = 'free';
+  }
+
+  const planDef = SUBSCRIPTION_PLANS[targetPlanId] || SUBSCRIPTION_PLANS.free;
+
+  const updatedRecord = {
+    ...current,
+    planId: planDef.id,
+    planName: planDef.name,
+    badge: planDef.badge,
+    price: planDef.price,
+    amount: planDef.amount,
+    status: 'CANCELLED',
+    cancelAtPeriodEnd: !immediate,
+    cancelledAt: new Date().toISOString(),
+    cancellationReason: reason || 'Cancelled by user or administrator',
+    notes: current.notes ? `${current.notes} | Cancelled: ${reason || 'N/A'}` : `Cancelled: ${reason || 'N/A'}`,
+  };
+
+  localData[userId] = updatedRecord;
+  writeLocalPlanData(localData);
+
+  try {
+    await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        plan_id: updatedRecord.planId,
+        plan_name: updatedRecord.planName,
+        plan_status: 'CANCELLED',
+      },
+    });
+  } catch (err) {
+    console.warn('[AdminService] Error updating auth metadata on cancel:', err.message);
+  }
+
+  return updatedRecord;
+}
+
+/**
+ * Reactivate / Resume an account's cancelled plan
+ */
+async function resumeAccountPlan(userId) {
+  const localData = readLocalPlanData();
+  const current = localData[userId] || {};
+
+  const restoredPlanId = current.planId === 'free' ? 'pro' : (current.planId || 'pro');
+  const planDef = SUBSCRIPTION_PLANS[restoredPlanId] || SUBSCRIPTION_PLANS.pro;
+
+  const updatedRecord = {
+    ...current,
+    planId: planDef.id,
+    planName: planDef.name,
+    badge: planDef.badge,
+    price: planDef.price,
+    amount: planDef.amount,
+    status: 'ACTIVE',
+    cancelAtPeriodEnd: false,
+    cancelledAt: null,
+    cancellationReason: null,
+    notes: current.notes ? `${current.notes} | Plan reactivated` : 'Plan reactivated',
+  };
+
+  localData[userId] = updatedRecord;
+  writeLocalPlanData(localData);
+
+  try {
+    await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        plan_id: updatedRecord.planId,
+        plan_name: updatedRecord.planName,
+        plan_status: 'ACTIVE',
+      },
+    });
+  } catch (err) {
+    console.warn('[AdminService] Error updating auth metadata on resume:', err.message);
+  }
+
+  return updatedRecord;
+}
+
 module.exports = {
   SUBSCRIPTION_PLANS,
   getAllAccounts,
@@ -520,4 +611,6 @@ module.exports = {
   extendDeadline,
   toggleAccountStatus,
   createAccount,
+  cancelAccountPlan,
+  resumeAccountPlan,
 };

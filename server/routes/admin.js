@@ -6,6 +6,8 @@ const {
   extendDeadline,
   toggleStatus,
   createAccount,
+  cancelAccountPlan,
+  resumeAccountPlan,
 } = require('../controllers/adminController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -18,5 +20,7 @@ router.put('/accounts/:id/plan', updateAccountPlan);
 router.post('/accounts/:id/extend', extendDeadline);
 router.put('/accounts/:id/status', toggleStatus);
 router.post('/accounts', createAccount);
+router.post('/accounts/:id/cancel', cancelAccountPlan);
+router.post('/accounts/:id/resume', resumeAccountPlan);
 
 module.exports = router;
