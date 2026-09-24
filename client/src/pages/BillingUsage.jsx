@@ -216,8 +216,13 @@ export default function BillingUsage() {
   const isCancelled = subscription.status === 'CANCELLED';
 
   const handleResumeSubscription = () => {
-    const updated = resumeSubscription();
-    setSubscription(updated);
+    // Route through Payment Gateway to reactivate (not instant active)
+    const targetPlanKey = (subscription.id && subscription.id !== 'free')
+      ? subscription.id
+      : (subscription.planId && subscription.planId !== 'free' ? subscription.planId : 'pro');
+    const plan = SUBSCRIPTION_PLANS[targetPlanKey] || SUBSCRIPTION_PLANS.pro;
+    setTargetPlan(plan);
+    setPaymentModalOpen(true);
   };
 
   return (
@@ -327,8 +332,8 @@ export default function BillingUsage() {
                     className="text-xs h-9 font-semibold gap-1.5 shadow-luxury"
                     onClick={handleResumeSubscription}
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Resume Subscription
+                    <CreditCard className="w-3.5 h-3.5" />
+                    Reactivate Plan (Pay & Activate)
                   </Button>
                 ) : (
                   <>
@@ -378,11 +383,11 @@ export default function BillingUsage() {
                 <Button
                   variant="luxury"
                   size="sm"
-                  className="h-8 px-3 text-xs font-semibold shrink-0 self-start sm:self-auto gap-1.5 shadow-luxury"
+                  className="h-8 px-3.5 text-xs font-semibold shrink-0 self-start sm:self-auto gap-1.5 shadow-luxury"
                   onClick={handleResumeSubscription}
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Reactivate Plan
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Reactivate Plan ({subscription.price || '₹249'}/mo)
                 </Button>
               </div>
             )}
@@ -499,7 +504,8 @@ export default function BillingUsage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {Object.values(SUBSCRIPTION_PLANS).filter(p => p.id !== 'free').map(p => {
-                const isCurrent = subscription.id === p.id;
+                const isCurrent = subscription.id === p.id || subscription.planId === p.id;
+                const isCurrentAndActive = isCurrent && !isCancelled;
                 return (
                   <div
                     key={p.id}
@@ -511,9 +517,14 @@ export default function BillingUsage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-bold text-base text-foreground">{p.name}</span>
-                        {isCurrent && (
+                        {isCurrentAndActive && (
                           <Badge className="bg-burgundy-900 text-white text-[10px] font-bold">
                             Current
+                          </Badge>
+                        )}
+                        {isCurrent && isCancelled && (
+                          <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px] font-bold">
+                            Cancelled
                           </Badge>
                         )}
                         {p.popular && !isCurrent && (
@@ -545,13 +556,17 @@ export default function BillingUsage() {
                     </div>
 
                     <Button
-                      variant={isCurrent ? "outline" : "luxury"}
+                      variant={isCurrentAndActive ? "outline" : "luxury"}
                       size="sm"
-                      disabled={isCurrent}
+                      disabled={isCurrentAndActive}
                       className="w-full text-xs font-bold"
                       onClick={() => handleOpenUpgrade(p.id)}
                     >
-                      {isCurrent ? 'Current Plan' : `Upgrade to ${p.name}`}
+                      {isCurrentAndActive
+                        ? 'Current Plan'
+                        : isCurrent && isCancelled
+                        ? `Reactivate ${p.name} (${p.price})`
+                        : `Upgrade to ${p.name}`}
                     </Button>
                   </div>
                 );
