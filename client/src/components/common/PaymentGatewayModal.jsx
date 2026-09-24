@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateSubscription } from '../../services/subscriptionService';
 import { useAuth } from '../../contexts/AuthContext';
+import upiQrImage from '../../assets/upi-qr.jpeg';
 
 /**
  * PaymentGatewayModal — High-Impact Evaluator/Examiner Sandbox Payment Gateway
@@ -1316,18 +1317,21 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                   <div
                     style={{
                       background: '#FFFFFF',
-                      padding: '12px',
+                      padding: '8px',
                       borderRadius: '16px',
                       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
                       marginBottom: '10px',
                       position: 'relative',
                       overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=kpcreation.demo@axisbank&pn=KPCreationSareeERP&am=${planAmount}&cu=INR`}
-                      alt="UPI Payment QR Code"
-                      style={{ width: 130, height: 130, display: 'block' }}
+                      src={upiQrImage}
+                      alt="UPI Payment QR Code - Bhavy Mangukiya"
+                      style={{ width: 175, height: 'auto', maxHeight: 225, objectFit: 'contain', display: 'block', borderRadius: '10px' }}
                     />
                     {/* Glowing Laser Scan Bar */}
                     <div
@@ -1343,8 +1347,8 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                     />
                   </div>
 
-                  <div style={{ fontSize: 11, color: '#D4AF37', fontWeight: 700, marginBottom: 8 }}>
-                    Merchant VPA: <span style={{ fontFamily: 'monospace' }}>kpcreation.demo@axisbank</span>
+                  <div style={{ fontSize: 11, color: '#D4AF37', fontWeight: 700, marginBottom: 8, textAlign: 'center' }}>
+                    Merchant UPI ID: <span style={{ fontFamily: 'monospace', color: '#FDF2F3' }}>bhavymangukiya04@okicici</span>
                   </div>
 
                   {/* 1-Click Simulate QR Scan Button */}
@@ -1379,7 +1383,7 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setUpiId('examiner.viva@okhdfcbank')}
+                      onClick={() => setUpiId('bhavymangukiya04@okicici')}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -1397,7 +1401,7 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
                     type="text"
                     value={upiId}
                     onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="e.g. examiner.viva@okhdfcbank"
+                    placeholder="e.g. bhavymangukiya04@okicici"
                     style={{
                       width: '100%',
                       background: 'rgba(255, 255, 255, 0.05)',
