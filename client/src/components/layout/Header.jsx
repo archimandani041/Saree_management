@@ -14,6 +14,7 @@ import { dashboardAPI } from '../../services/api';
 import { useKeyboardShortcut } from '../../hooks/useDebounce';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { cn } from '../../lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,10 +36,11 @@ import {
   AlertCircle,
   CheckCircle2,
   User as UserIcon,
+  Users
 } from 'lucide-react';
 
 const Header = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
   const { sidebarOpen, setSidebarOpen, setSearchOpen, themeMode, toggleTheme } = useApp();
   const navigate = useNavigate();
 
@@ -68,12 +70,12 @@ const Header = () => {
       }
     };
 
-    if (user) {
+    if (user && !isSuperAdmin) {
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   // Global search shortcut Ctrl + K
   useKeyboardShortcut('k', true, () => {
@@ -103,20 +105,22 @@ const Header = () => {
           <Menu className="w-5 h-5" />
         </Button>
 
-        {/* Search Bar Pill Trigger */}
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className="flex items-center gap-3 w-full max-w-md h-10 px-3.5 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/70 hover:border-burgundy-900/30 text-muted-foreground text-sm transition-all duration-200 shadow-xs group"
-        >
-          <Search className="w-4 h-4 text-muted-foreground group-hover:text-burgundy-900 dark:group-hover:text-burgundy-400 transition-colors" />
-          <span className="flex-1 text-left text-xs sm:text-sm font-medium truncate">
-            Search sarees, series code, fabrics...
-          </span>
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground bg-background border border-border rounded-md shadow-xs">
-            Ctrl K
-          </kbd>
-        </button>
+        {/* Search Bar Pill Trigger — Boutique User Only */}
+        {!isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center gap-3 w-full max-w-md h-10 px-3.5 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/70 hover:border-burgundy-900/30 text-muted-foreground text-sm transition-all duration-200 shadow-xs group"
+          >
+            <Search className="w-4 h-4 text-muted-foreground group-hover:text-burgundy-900 dark:group-hover:text-burgundy-400 transition-colors" />
+            <span className="flex-1 text-left text-xs sm:text-sm font-medium truncate">
+              Search sarees, series code, fabrics...
+            </span>
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground bg-background border border-border rounded-md shadow-xs">
+              Ctrl K
+            </kbd>
+          </button>
+        )}
       </div>
 
       {/* Right Area: Theme Toggle, Notifications, User Menu */}
@@ -136,89 +140,91 @@ const Header = () => {
           )}
         </Button>
 
-        {/* Notifications Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="relative text-muted-foreground hover:text-foreground"
-              aria-label="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              {notifications.length > 0 && (
-                <span className="absolute top-2 right-2 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
+        {/* Notifications Dropdown — Boutique User Only */}
+        {!isSuperAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="relative text-muted-foreground hover:text-foreground"
+                aria-label="Notifications"
+              >
+                <Bell className="w-4 h-4" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-2 right-2 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="w-80 p-0 shadow-luxury-lg">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <span className="text-sm font-bold text-foreground">Alerts & Notifications</span>
-              {notifications.length > 0 ? (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                  {notifications.length} low stock
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  Healthy
-                </Badge>
-              )}
-            </div>
-
-            <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
-                  <p className="text-xs font-medium">All stock levels are healthy.</p>
-                </div>
-              ) : (
-                notifications.map((noti) => (
-                  <button
-                    key={noti.id}
-                    onClick={() => handleNotificationClick(noti.id)}
-                    className="w-full flex items-start gap-3 p-3 hover:bg-muted/60 transition-colors text-left"
-                  >
-                    <div className="p-1.5 rounded-lg bg-destructive/10 text-destructive mt-0.5 shrink-0">
-                      {noti.type === 'out' ? (
-                        <AlertCircle className="w-4 h-4" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      )}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-bold text-foreground leading-tight">
-                        {noti.title}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
-                        {noti.message}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground/80 mt-1">
-                        {noti.time}
-                      </span>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-
-            {notifications.length > 0 && (
-              <div className="p-2 border-t border-border bg-muted/20">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-xs text-burgundy-900 dark:text-burgundy-300 font-bold"
-                  onClick={() => navigate('/low-stock')}
-                >
-                  View All Low Stock Items
-                </Button>
+            <DropdownMenuContent align="end" className="w-80 p-0 shadow-luxury-lg">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <span className="text-sm font-bold text-foreground">Alerts & Notifications</span>
+                {notifications.length > 0 ? (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                    {notifications.length} low stock
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    Healthy
+                  </Badge>
+                )}
               </div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+
+              <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+                    <p className="text-xs font-medium">All stock levels are healthy.</p>
+                  </div>
+                ) : (
+                  notifications.map((noti) => (
+                    <button
+                      key={noti.id}
+                      onClick={() => handleNotificationClick(noti.id)}
+                      className="w-full flex items-start gap-3 p-3 hover:bg-muted/60 transition-colors text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-destructive/10 text-destructive mt-0.5 shrink-0">
+                        {noti.type === 'out' ? (
+                          <AlertCircle className="w-4 h-4" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-amber-600" />
+                        )}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-foreground leading-tight">
+                          {noti.title}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                          {noti.message}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/80 mt-1">
+                          {noti.time}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {notifications.length > 0 && (
+                <div className="p-2 border-t border-border bg-muted/20">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs text-burgundy-900 dark:text-burgundy-300 font-bold"
+                    onClick={() => navigate('/low-stock')}
+                  >
+                    View All Low Stock Items
+                  </Button>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <div className="h-6 w-[1px] bg-border mx-1" />
 
@@ -230,8 +236,11 @@ const Header = () => {
                 <span className="text-xs font-bold text-foreground max-w-[120px] truncate">
                   {user?.full_name || 'Admin User'}
                 </span>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  {user?.role || 'Staff'}
+                <span className={cn(
+                  "text-[10px] font-semibold uppercase tracking-wider",
+                  isSuperAdmin ? "text-amber-600 dark:text-amber-400 font-bold" : "text-muted-foreground"
+                )}>
+                  {isSuperAdmin ? 'Platform Super Admin' : (user?.role || 'Staff')}
                 </span>
               </div>
               <Avatar className="w-8 h-8 ring-2 ring-burgundy-900/20">
@@ -254,13 +263,23 @@ const Header = () => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => navigate('/settings')}
-              className="cursor-pointer gap-2 py-2"
-            >
-              <Settings className="w-4 h-4 text-muted-foreground" />
-              <span>Settings</span>
-            </DropdownMenuItem>
+            {isSuperAdmin ? (
+              <DropdownMenuItem
+                onClick={() => navigate('/admin/accounts')}
+                className="cursor-pointer gap-2 py-2 text-amber-700 dark:text-amber-400 font-semibold"
+              >
+                <Users className="w-4 h-4" />
+                <span>Account Control</span>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onClick={() => navigate('/settings')}
+                className="cursor-pointer gap-2 py-2"
+              >
+                <Settings className="w-4 h-4 text-muted-foreground" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}

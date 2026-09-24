@@ -46,29 +46,55 @@ const SLIDES = [
   }
 ];
 
-const Login = () => {
-  const { login, signUp, isAuthenticated } = useAuth();
+const Login = ({ defaultSignUp = false }) => {
+  const { login, signUp, isAuthenticated, isSuperAdmin } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
-  const rawTarget = location.state?.from?.pathname || location.state?.from || '/dashboard';
+  const isPaid = searchParams.get('paid') === 'true';
+  const planParam = searchParams.get('plan');
+  const txnParam = searchParams.get('txn');
+  const defaultTarget = isSuperAdmin ? '/admin/accounts' : '/dashboard';
+  const rawTarget = location.state?.from?.pathname || location.state?.from;
   const from = (!rawTarget || rawTarget === '/' || rawTarget === '/landing' || rawTarget === '/login')
-    ? '/dashboard'
+    ? defaultTarget
     : rawTarget;
 
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from, { replace: true });
+      navigate(isSuperAdmin ? '/admin/accounts' : from, { replace: true });
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, isSuperAdmin, navigate, from]);
 
   // Mode toggles
-  const [isSignUp, setIsSignUp] = useState(false);
+  const isInitialSignUp = defaultSignUp ||
+    searchParams.get('mode') === 'signup' ||
+    searchParams.get('mode') === 'register' ||
+    location.pathname === '/signup' ||
+    location.pathname === '/register';
+
+  const [isSignUp, setIsSignUp] = useState(() => Boolean(isInitialSignUp));
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const shouldSignUp = defaultSignUp ||
+      searchParams.get('mode') === 'signup' ||
+      searchParams.get('mode') === 'register' ||
+      location.pathname === '/signup' ||
+      location.pathname === '/register';
+
+    if (shouldSignUp) {
+      setIsSignUp(true);
+      setIsForgotPassword(false);
+    } else if (searchParams.get('mode') === 'login' || (!searchParams.get('mode') && location.pathname === '/login')) {
+      setIsSignUp(false);
+      setIsForgotPassword(false);
+    }
+  }, [searchParams, location.pathname, defaultSignUp]);
 
   // Form Fields
   const [firstName, setFirstName] = useState('');
@@ -106,7 +132,8 @@ const Login = () => {
       await login(email.trim(), password);
       setThemeMode('light');
       localStorage.setItem('sari_theme', 'light');
-      navigate(from, { replace: true });
+      const isAdminEmail = email.trim().toLowerCase() === 'admin@saristockmanager.com';
+      navigate(isAdminEmail ? '/admin/accounts' : from, { replace: true });
     } catch (err) {
       console.error(err);
       if (err.message?.toLowerCase().includes('invalid') || err.message?.toLowerCase().includes('credentials')) {
@@ -264,7 +291,7 @@ const Login = () => {
                 {isForgotPassword
                   ? 'Reset Password'
                   : isSignUp
-                  ? 'Join KP Creation'
+                  ? 'Create Account'
                   : 'Welcome Back'}
               </h2>
               <p className="text-sm text-muted-foreground mt-1.5">
@@ -305,6 +332,18 @@ const Login = () => {
             </div>
 
             {/* Notification & Alerts */}
+            {isPaid && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <div className="font-bold">Payment Verified • {(planParam || 'Team').toUpperCase()} Plan Activated</div>
+                  <div className="text-[11px] opacity-80 mt-0.5">
+                    {txnParam ? `Transaction ID: ${txnParam} • ` : ''}Complete your account setup below to access your inventory.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {sessionReset && (
               <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />

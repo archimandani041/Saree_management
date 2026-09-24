@@ -18,6 +18,7 @@ const buttonVariants = cva(
         soft: "bg-burgundy-50 text-burgundy-900 hover:bg-burgundy-100 border border-burgundy-200",
       },
       size: {
+        xs: "h-7 rounded-md px-2 text-xs",
         default: "h-10 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-11 rounded-lg px-8 text-base",
