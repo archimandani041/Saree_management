@@ -16,6 +16,7 @@ import {
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cancelSubscription, SUBSCRIPTION_PLANS } from '../../services/subscriptionService';
+import { paymentAPI } from '../../services/api';
 
 const CANCELLATION_REASONS = [
   { id: 'cost', label: 'Pricing is too high / cutting business expenses' },
@@ -69,19 +70,15 @@ export default function CancelPlanModal({
         onCancelled(updated);
       }
 
-      // Try background dispatch to server payment cancellation notification if endpoint exists
+      // Dispatch to server payment cancellation notification
       try {
-        await fetch('http://localhost:5000/api/payment/send-cancellation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            planName: currentPlan.name,
-            immediate: isImmediate,
-            reason: reasonLabel,
-            feedback,
-            renewDate: subscription.renewDate,
-            daysRemaining: daysLeft
-          })
+        await paymentAPI.sendCancellation({
+          planName: currentPlan.name,
+          immediate: isImmediate,
+          reason: reasonLabel,
+          feedback,
+          renewDate: subscription.renewDate,
+          daysRemaining: daysLeft
         });
       } catch (_) {
         // Non-blocking offline fallback

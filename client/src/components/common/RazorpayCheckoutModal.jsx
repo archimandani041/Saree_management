@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import upiQrImage from '../../assets/upi-qr.jpeg';
 
 /**
@@ -43,6 +43,31 @@ export default function RazorpayCheckoutModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStage, setProcessStage] = useState('');
 
+  // Timers ref for safe lifecycle cleanup
+  const timersRef = useRef([]);
+  const safeTimeout = (fn, delay) => {
+    const id = setTimeout(() => {
+      timersRef.current = timersRef.current.filter((t) => t !== id);
+      fn();
+    }, delay);
+    timersRef.current.push(id);
+    return id;
+  };
+  const clearAllTimers = () => {
+    timersRef.current.forEach((id) => clearTimeout(id));
+    timersRef.current = [];
+  };
+
+  // Reset form and clear timers on modal open / unmount
+  useEffect(() => {
+    clearAllTimers();
+    setIsProcessing(false);
+    setProcessStage('');
+    setSelectedMethod('upi');
+    setUpiOption('gpay');
+    return () => clearAllTimers();
+  }, [isOpen]);
+
   const cleanPhone = customerPhone.replace(/\D/g, '').slice(-10) || '9909680207';
 
   // 1-Click Card presets
@@ -63,18 +88,19 @@ export default function RazorpayCheckoutModal({
   };
 
   const handlePayNow = () => {
+    clearAllTimers();
     setIsProcessing(true);
     setProcessStage('Connecting to Bank Gateway...');
 
-    setTimeout(() => {
+    safeTimeout(() => {
       setProcessStage('Authenticating 3D Secure / MPIN Token...');
     }, 600);
 
-    setTimeout(() => {
+    safeTimeout(() => {
       setProcessStage('Capturing Payment with Razorpay Clearing Switch...');
     }, 1200);
 
-    setTimeout(() => {
+    safeTimeout(() => {
       const generatedRzpId = `pay_${Math.random().toString(36).substring(2, 8).toUpperCase()}${Date.now().toString(36).toUpperCase()}`;
       setIsProcessing(false);
       if (onSuccess) {

@@ -174,4 +174,10 @@ export const adminAPI = {
   resumePlan: (id) => api.post(`/admin/accounts/${id}/resume`),
 };
 
+// Payment & Notification APIs
+export const paymentAPI = {
+  sendReceipt: (data) => api.post('/payment/send-receipt', data),
+  sendCancellation: (data) => api.post('/payment/send-cancellation', data),
+};
+
 export default api;

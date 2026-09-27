@@ -2,7 +2,7 @@
  * Main App Router Component
  * Connects Contexts, Custom MUI Theme + Tailwind, React Router, Layout, and Pages
  */
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -14,22 +14,38 @@ import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
-// Pages
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Login';
-import AuthCallback from './pages/AuthCallback';
-import SetNewPassword from './pages/SetNewPassword';
-import Dashboard from './pages/Dashboard';
-import AllSarees from './pages/AllSarees';
-import SareeForm from './pages/SareeForm';
-import SareeEdit from './pages/SareeEdit';
-import SareeDetail from './pages/SareeDetail';
-import LowStock from './pages/LowStock';
-import StockHistory from './pages/StockHistory';
-import Settings from './pages/Settings';
-import StockRequests from './pages/StockRequests';
-import BillingUsage from './pages/BillingUsage';
-import AdminAccounts from './pages/AdminAccounts';
+// Code-split page chunks for optimal bundle size and sub-second load times
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Login = lazy(() => import('./pages/Login'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const SetNewPassword = lazy(() => import('./pages/SetNewPassword'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AllSarees = lazy(() => import('./pages/AllSarees'));
+const SareeForm = lazy(() => import('./pages/SareeForm'));
+const SareeEdit = lazy(() => import('./pages/SareeEdit'));
+const SareeDetail = lazy(() => import('./pages/SareeDetail'));
+const LowStock = lazy(() => import('./pages/LowStock'));
+const StockHistory = lazy(() => import('./pages/StockHistory'));
+const Settings = lazy(() => import('./pages/Settings'));
+const StockRequests = lazy(() => import('./pages/StockRequests'));
+const BillingUsage = lazy(() => import('./pages/BillingUsage'));
+const AdminAccounts = lazy(() => import('./pages/AdminAccounts'));
+
+const PageLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', width: '100%' }}>
+    <div
+      style={{
+        width: 36,
+        height: 36,
+        border: '3px solid rgba(212, 175, 55, 0.25)',
+        borderTopColor: '#D4AF37',
+        borderRadius: '50%',
+        animation: 'spin 0.75s linear infinite',
+      }}
+    />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 /**
  * RootRoute:
@@ -62,7 +78,8 @@ const AppContent = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-      <Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
         {/* Public Routes */}
         <Route path="/" element={<RootRoute />} />
         <Route path="/landing" element={<LandingPage />} />
@@ -195,6 +212,7 @@ const AppContent = () => {
           />
         </Route>
       </Routes>
+      </Suspense>
       </SnackbarProvider>
     </ThemeProvider>
   );

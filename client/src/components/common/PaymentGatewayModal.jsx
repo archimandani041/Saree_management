@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateSubscription } from '../../services/subscriptionService';
 import { useAuth } from '../../contexts/AuthContext';
+import { paymentAPI } from '../../services/api';
 import upiQrImage from '../../assets/upi-qr.jpeg';
 import RazorpayCheckoutModal from './RazorpayCheckoutModal';
 
@@ -106,9 +107,29 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
   const [isForwarding, setIsForwarding] = useState(false);
   const [forwardSuccessToast, setForwardSuccessToast] = useState('');
 
+  // Timer reference for leak-free async callbacks
+  const timersRef = useRef([]);
+  const safeTimeout = (fn, delay) => {
+    const id = setTimeout(() => {
+      timersRef.current = timersRef.current.filter((t) => t !== id);
+      fn();
+    }, delay);
+    timersRef.current.push(id);
+    return id;
+  };
+  const clearAllTimers = () => {
+    timersRef.current.forEach((id) => clearTimeout(id));
+    timersRef.current = [];
+  };
+
+  useEffect(() => {
+    return () => clearAllTimers();
+  }, []);
+
   // Sync user details on modal open
   useEffect(() => {
     if (isOpen) {
+      clearAllTimers();
       setIsProcessing(false);
       setIsSuccess(false);
       setShowOtpScreen(false);
@@ -143,6 +164,8 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
       setCustomerEmail(email);
       setCustomerName(name);
       setCustomerPhone(phone.replace(/[^0-9]/g, '').slice(-10) || '9909680207');
+    } else {
+      clearAllTimers();
     }
   }, [isOpen, authUser]);
 
@@ -203,33 +226,25 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
   // Dispatch receipt to server
   const sendReceiptNotification = async (details) => {
     try {
-      const res = await fetch('http://localhost:5000/api/payment/send-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(details),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEmailPreviewHtml(data.emailHtml || '');
-        setPlainTextReceipt(data.plainTextReceipt || '');
-        setWhatsappMessageText(data.whatsappMessage || '');
-        if (data.etherealUrl) setEtherealUrl(data.etherealUrl);
-        setEmailStatusText(`Official Tax Invoice #${details.invoiceNumber} & Thank-You confirmation dispatched to ${details.customerEmail}`);
-        
-        // If auto-open WhatsApp is enabled, trigger real WhatsApp delivery!
-        if (autoOpenWhatsApp && data.whatsappMessage) {
-          setTimeout(() => {
-            triggerRealWhatsApp(data.whatsappMessage);
-          }, 800);
-        }
-      } else {
-        throw new Error('Server returned non-200');
+      const res = await paymentAPI.sendReceipt(details);
+      const data = res?.data || {};
+      setEmailPreviewHtml(data.emailHtml || '');
+      setPlainTextReceipt(data.plainTextReceipt || '');
+      setWhatsappMessageText(data.whatsappMessage || '');
+      if (data.etherealUrl) setEtherealUrl(data.etherealUrl);
+      setEmailStatusText(`Official Tax Invoice #${details.invoiceNumber} & Thank-You confirmation dispatched to ${details.customerEmail}`);
+      
+      // If auto-open WhatsApp is enabled, trigger real WhatsApp delivery!
+      if (autoOpenWhatsApp && data.whatsappMessage) {
+        safeTimeout(() => {
+          triggerRealWhatsApp(data.whatsappMessage);
+        }, 800);
       }
     } catch (_) {
       // Offline fallback
       setEmailStatusText(`Official Tax Invoice #${details.invoiceNumber} & Thank-You confirmation dispatched to ${details.customerEmail}`);
       if (autoOpenWhatsApp) {
-        setTimeout(() => {
+        safeTimeout(() => {
           triggerRealWhatsApp();
         }, 800);
       }
@@ -306,22 +321,22 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
     setCurrentStepIndex(0);
 
     // Step 0 -> 1
-    setTimeout(() => {
+    safeTimeout(() => {
       setCurrentStepIndex(1);
     }, 500);
 
     // Step 1 -> 2
-    setTimeout(() => {
+    safeTimeout(() => {
       setCurrentStepIndex(2);
     }, 1100);
 
     // Step 2 -> 3
-    setTimeout(() => {
+    safeTimeout(() => {
       setCurrentStepIndex(3);
     }, 1700);
 
     // Final Success
-    setTimeout(() => {
+    safeTimeout(() => {
       handlePaymentSuccess(null, methodName);
     }, 2300);
   };
@@ -453,25 +468,21 @@ export default function PaymentGatewayModal({ isOpen, onClose, plan }) {
     }
     setIsForwarding(true);
     try {
-      await fetch('http://localhost:5000/api/payment/send-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: 'External Guide / Evaluator',
-          customerEmail: forwardEmailInput,
-          planName: plan.name,
-          amount: planAmount,
-          transactionId,
-          utrNumber,
-          invoiceNumber,
-          paymentMethod: pendingMethod || 'Sandbox Verified',
-          phoneNumber: customerPhone,
-        }),
+      await paymentAPI.sendReceipt({
+        customerName: 'External Guide / Evaluator',
+        customerEmail: forwardEmailInput,
+        planName: plan.name,
+        amount: planAmount,
+        transactionId,
+        utrNumber,
+        invoiceNumber,
+        paymentMethod: pendingMethod || 'Sandbox Verified',
+        phoneNumber: customerPhone,
       });
     } catch (_) {}
     setIsForwarding(false);
     setForwardSuccessToast(`Official Tax Invoice & Thank You letter dispatched to ${forwardEmailInput}!`);
-    setTimeout(() => setForwardSuccessToast(''), 6000);
+    safeTimeout(() => setForwardSuccessToast(''), 6000);
   };
 
   return (
