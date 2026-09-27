@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { dashboardAPI } from '../../services/api';
 import { useKeyboardShortcut } from '../../hooks/useDebounce';
 import { Button } from '../ui/button';
@@ -36,12 +37,15 @@ import {
   AlertCircle,
   CheckCircle2,
   User as UserIcon,
-  Users
+  Users,
+  Globe,
+  Check
 } from 'lucide-react';
 
 const Header = () => {
   const { user, logout, isSuperAdmin } = useAuth();
   const { sidebarOpen, setSidebarOpen, setSearchOpen, themeMode, toggleTheme } = useApp();
+  const { language, changeLanguage, languages, currentLanguageInfo, t } = useLanguage();
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
@@ -114,7 +118,7 @@ const Header = () => {
           >
             <Search className="w-4 h-4 text-muted-foreground group-hover:text-burgundy-900 dark:group-hover:text-burgundy-400 transition-colors" />
             <span className="flex-1 text-left text-xs sm:text-sm font-medium truncate">
-              Search sarees, series code, fabrics...
+              {t('header.searchPlaceholder')}
             </span>
             <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground bg-background border border-border rounded-md shadow-xs">
               Ctrl K
@@ -123,14 +127,59 @@ const Header = () => {
         )}
       </div>
 
-      {/* Right Area: Theme Toggle, Notifications, User Menu */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      {/* Right Area: Language Switcher, Theme Toggle, Notifications, User Menu */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* Language Switcher Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1.5 px-2.5 h-8 rounded-full border border-border/70 bg-muted/30 hover:bg-muted/70 text-foreground text-xs font-semibold transition-all duration-150"
+              title={t('header.language')}
+            >
+              <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span>{currentLanguageInfo.flag}</span>
+              <span className="hidden sm:inline font-bold">{currentLanguageInfo.nativeName}</span>
+              <span className="sm:hidden font-bold">{currentLanguageInfo.tag}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52 p-1.5 shadow-luxury-lg">
+            <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">
+              {t('header.selectLanguage')}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {languages.map((l) => {
+              const isCurrent = l.code === language;
+              return (
+                <DropdownMenuItem
+                  key={l.code}
+                  onClick={() => changeLanguage(l.code)}
+                  className={cn(
+                    "flex items-center justify-between cursor-pointer text-xs font-medium px-2.5 py-2 rounded-lg transition-colors",
+                    isCurrent && "bg-burgundy-900/10 text-burgundy-900 dark:text-burgundy-300 font-bold"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{l.flag}</span>
+                    <div className="flex flex-col text-left">
+                      <span className="font-semibold text-foreground">{l.nativeName}</span>
+                      <span className="text-[10px] text-muted-foreground">{l.label}</span>
+                    </div>
+                  </div>
+                  {isCurrent && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* Theme Toggle */}
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={toggleTheme}
-          title={themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          title={themeMode === 'dark' ? t('header.themeLight') : t('header.themeDark')}
           className="text-muted-foreground hover:text-foreground"
         >
           {themeMode === 'dark' ? (
@@ -162,14 +211,14 @@ const Header = () => {
 
             <DropdownMenuContent align="end" className="w-80 p-0 shadow-luxury-lg">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                <span className="text-sm font-bold text-foreground">Alerts & Notifications</span>
+                <span className="text-sm font-bold text-foreground">{t('header.alertsAndNotifications')}</span>
                 {notifications.length > 0 ? (
                   <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
                     {notifications.length} low stock
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                    Healthy
+                    {t('header.healthy')}
                   </Badge>
                 )}
               </div>
@@ -178,7 +227,7 @@ const Header = () => {
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
                     <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
-                    <p className="text-xs font-medium">All stock levels are healthy.</p>
+                    <p className="text-xs font-medium">{t('header.allStockHealthy')}</p>
                   </div>
                 ) : (
                   notifications.map((noti) => (
@@ -218,7 +267,7 @@ const Header = () => {
                     className="w-full text-xs text-burgundy-900 dark:text-burgundy-300 font-bold"
                     onClick={() => navigate('/low-stock')}
                   >
-                    View All Low Stock Items
+                    {t('header.viewAllLowStock')}
                   </Button>
                 </div>
               )}
@@ -240,7 +289,7 @@ const Header = () => {
                   "text-[10px] font-semibold uppercase tracking-wider",
                   isSuperAdmin ? "text-amber-600 dark:text-amber-400 font-bold" : "text-muted-foreground"
                 )}>
-                  {isSuperAdmin ? 'Platform Super Admin' : (user?.role || 'Staff')}
+                  {isSuperAdmin ? t('header.roleSuperAdmin') : (user?.role === 'admin' ? t('header.roleBoutique') : 'Staff')}
                 </span>
               </div>
               <Avatar className="w-8 h-8 ring-2 ring-burgundy-900/20">
@@ -269,7 +318,7 @@ const Header = () => {
                 className="cursor-pointer gap-2 py-2 text-amber-700 dark:text-amber-400 font-semibold"
               >
                 <Users className="w-4 h-4" />
-                <span>Account Control</span>
+                <span>{t('nav.adminAccounts')}</span>
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem
@@ -277,7 +326,7 @@ const Header = () => {
                 className="cursor-pointer gap-2 py-2"
               >
                 <Settings className="w-4 h-4 text-muted-foreground" />
-                <span>Settings</span>
+                <span>{t('nav.settings')}</span>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -286,7 +335,7 @@ const Header = () => {
               className="cursor-pointer gap-2 py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
+              <span>{t('nav.logout')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

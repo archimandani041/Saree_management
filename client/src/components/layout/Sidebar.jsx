@@ -31,40 +31,17 @@ import {
 } from 'lucide-react';
 import { getActiveSubscription } from '../../services/subscriptionService';
 import { sareeAPI } from '../../services/api';
+import { useLanguage } from '../../contexts/LanguageContext';
 import React, { useState, useEffect, useMemo } from 'react';
 
 const DRAWER_WIDTH = 264;
-
-const navSections = [
-  {
-    heading: 'Main',
-    items: [
-      { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-      { label: 'All Sarees', path: '/sarees', icon: Shirt },
-    ],
-  },
-  {
-    heading: 'Inventory',
-    items: [
-      { label: 'Low Stock', path: '/low-stock', icon: AlertTriangle, badge: '!' },
-      { label: 'Stock Requests', path: '/stock-requests', icon: MessageCircle },
-      { label: 'Stock History', path: '/history', icon: History },
-    ],
-  },
-  {
-    heading: 'System',
-    items: [
-      { label: 'Settings', path: '/settings', icon: Settings },
-      { label: 'Billing & Usage', path: '/billing', icon: ShieldCheck, isPlanBadge: true },
-    ],
-  },
-];
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isSuperAdmin } = useAuth();
   const { sidebarOpen, setSidebarOpen, themeMode, toggleTheme } = useApp();
+  const { t } = useLanguage();
 
   const [subscription, setSubscription] = useState(getActiveSubscription());
   const [sareesCount, setSareesCount] = useState(12);
@@ -73,10 +50,10 @@ const Sidebar = () => {
     if (isSuperAdmin) {
       return [
         {
-          heading: 'Platform Management',
+          heading: t('nav.platformManagement'),
           items: [
             {
-              label: 'Account & Subscriptions',
+              label: t('nav.adminAccounts'),
               path: '/admin/accounts',
               icon: Users,
               badge: 'Master',
@@ -86,8 +63,31 @@ const Sidebar = () => {
         },
       ];
     }
-    return navSections;
-  }, [isSuperAdmin]);
+    return [
+      {
+        heading: t('nav.main'),
+        items: [
+          { label: t('nav.dashboard'), path: '/dashboard', icon: LayoutDashboard },
+          { label: t('nav.allSarees'), path: '/sarees', icon: Shirt },
+        ],
+      },
+      {
+        heading: t('nav.inventory'),
+        items: [
+          { label: t('nav.lowStock'), path: '/low-stock', icon: AlertTriangle, badge: '!' },
+          { label: t('nav.stockRequests'), path: '/stock-requests', icon: MessageCircle },
+          { label: t('nav.stockHistory'), path: '/history', icon: History },
+        ],
+      },
+      {
+        heading: t('nav.system'),
+        items: [
+          { label: t('nav.settings'), path: '/settings', icon: Settings },
+          { label: t('nav.billing'), path: '/billing', icon: ShieldCheck, isPlanBadge: true },
+        ],
+      },
+    ];
+  }, [isSuperAdmin, t]);
 
   useEffect(() => {
     const handleSubChange = () => setSubscription(getActiveSubscription());
@@ -268,15 +268,15 @@ const Sidebar = () => {
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-xs font-bold text-foreground">{subscription.name} Plan</span>
+                    <span className="text-xs font-bold text-foreground">{subscription.name} {t('billing.plan', 'Plan')}</span>
                   </div>
                   {subscription.status === 'CANCELLED' ? (
                     <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 font-semibold">
-                      Cancelled
+                      {t('common.cancelled', 'Cancelled')}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold">
-                      Active
+                      {t('common.active', 'Active')}
                     </Badge>
                   )}
                 </div>
@@ -284,7 +284,7 @@ const Sidebar = () => {
                 {/* Saree Quota Mini Bar */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Saree SKUs</span>
+                    <span>{t('inventory.sareeSkus', 'Saree SKUs')}</span>
                     <span className="font-mono font-semibold text-foreground">
                       {sareesCount} / {(subscription.limits?.sarees || 500).toLocaleString()}
                     </span>
@@ -301,7 +301,7 @@ const Sidebar = () => {
                 </div>
 
                 <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-burgundy-900 dark:text-amber-300 group-hover:underline">
-                  <span>Account Limits & Usage</span>
+                  <span>{t('billing.accountLimitsUsage', 'Account Limits & Usage')}</span>
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </div>
@@ -323,7 +323,7 @@ const Sidebar = () => {
                 }}
               >
                 <PlusCircle className="w-4 h-4" />
-                {location.pathname === '/stock-requests' ? 'New Request' : 'New Collection'}
+                {location.pathname === '/stock-requests' ? t('nav.newRequest', 'New Request') : t('nav.newCollection', 'New Collection')}
               </Button>
             </div>
           </>
@@ -344,7 +344,7 @@ const Sidebar = () => {
                   "text-[10px] font-medium uppercase tracking-wider",
                   isSuperAdmin ? "text-amber-600 dark:text-amber-400 font-bold" : "text-muted-foreground"
                 )}>
-                  {isSuperAdmin ? 'Platform Super Admin' : (user?.role || 'Staff')}
+                  {isSuperAdmin ? t('header.roleSuperAdmin', 'Platform Super Admin') : (user?.role || 'Staff')}
                 </span>
               </div>
             </div>
@@ -352,14 +352,14 @@ const Sidebar = () => {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={toggleTheme}
-                title="Toggle Theme"
+                title={t('header.toggleTheme', 'Toggle Theme')}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 {themeMode === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
               </button>
               <button
                 onClick={handleLogout}
-                title="Log Out"
+                title={t('nav.logout', 'Log Out')}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <LogOut className="w-4 h-4" />

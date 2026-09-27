@@ -12,6 +12,7 @@ import { Label } from '../components/ui/label';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import BillingUsage from './BillingUsage';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   Settings as SettingsIcon,
   Building2,
@@ -22,12 +23,15 @@ import {
   AlertTriangle,
   Loader2,
   Save,
-  CreditCard
+  CreditCard,
+  Globe,
+  Check
 } from 'lucide-react';
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') === 'billing' ? 'billing' : 'general';
+  const { language, changeLanguage, supportedLanguages, t } = useLanguage();
 
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -72,7 +76,7 @@ const Settings = () => {
         theme: themeMode,
         default_minimum_stock: defaultMinStock
       });
-      setSuccess('Settings updated successfully!');
+      setSuccess(t('settings.settingsSaved', 'Settings updated successfully!'));
     } catch (err) {
       console.error(err);
       setError('Failed to save settings.');
@@ -99,11 +103,11 @@ const Settings = () => {
             <SettingsIcon className="w-5 h-5" />
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            System Preferences
+            {t('settings.title', 'System Preferences')}
           </h1>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure shop branding, portal defaults, warehouse thresholds, and subscription limits.
+          {t('settings.subtitle', 'Configure shop branding, portal defaults, warehouse thresholds, and subscription limits.')}
         </p>
       </div>
 
@@ -119,7 +123,7 @@ const Settings = () => {
           )}
         >
           <SettingsIcon className="w-4 h-4" />
-          General Preferences
+          {t('settings.generalTab', 'General Preferences')}
         </button>
 
         <button
@@ -132,7 +136,7 @@ const Settings = () => {
           )}
         >
           <CreditCard className="w-4 h-4" />
-          Billing & Account Limits
+          {t('settings.billingTab', 'Billing & Account Limits')}
         </button>
       </div>
 
@@ -154,6 +158,62 @@ const Settings = () => {
             </div>
           )}
 
+          {/* Language & Regional Localization Card */}
+          <Card className="border border-border shadow-luxury">
+            <CardHeader className="p-6 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-serif flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-burgundy-900 dark:text-amber-400" />
+                    {t('settings.languagePreferences', 'Language & Regional Localization')}
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    {t('settings.languageDescription', 'Select your preferred language for the ERP interface, ledger tables, and printable documents.')}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {supportedLanguages.map((langItem) => {
+                  const isSelected = language === langItem.code;
+                  return (
+                    <button
+                      key={langItem.code}
+                      type="button"
+                      onClick={() => changeLanguage(langItem.code)}
+                      className={cn(
+                        "flex items-center justify-between p-3.5 rounded-xl border text-left transition-all duration-200",
+                        isSelected
+                          ? "border-burgundy-900/50 dark:border-amber-400/50 bg-burgundy-900/5 dark:bg-amber-400/10 shadow-sm ring-1 ring-burgundy-900/30 dark:ring-amber-400/30"
+                          : "border-border hover:border-border/80 hover:bg-muted/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl select-none">{langItem.flag}</span>
+                        <div>
+                          <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            {langItem.nativeName}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {langItem.label} ({langItem.tag})
+                          </p>
+                        </div>
+                      </div>
+                      {isSelected ? (
+                        <div className="w-5 h-5 rounded-full bg-burgundy-900 dark:bg-amber-400 text-white dark:text-burgundy-950 flex items-center justify-center">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border border-border" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border border-border shadow-luxury">
             <CardHeader className="p-6 pb-4">
               <CardTitle className="text-lg font-serif">Enterprise Profile</CardTitle>
@@ -162,100 +222,101 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
 
-        <CardContent className="p-6 pt-0">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="companyName" className="text-xs font-semibold">
-                Shop / Firm Trading Name *
-              </Label>
-              <div className="relative">
-                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="companyName"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
-            </div>
+            <CardContent className="p-6 pt-0">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="companyName" className="text-xs font-semibold">
+                    {t('settings.companyName', 'Shop / Firm Trading Name')} *
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="companyName"
+                      placeholder={t('settings.companyPlaceholder', 'e.g. KP Creation Textiles')}
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="logoUrl" className="text-xs font-semibold">
-                Brand Logo Asset URL
-              </Label>
-              <div className="relative">
-                <Image className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="logoUrl"
-                  placeholder="https://your-domain.com/logo.png"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="logoUrl" className="text-xs font-semibold">
+                    {t('settings.logoUrl', 'Brand Logo Asset URL')}
+                  </Label>
+                  <div className="relative">
+                    <Image className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="logoUrl"
+                      placeholder="https://your-domain.com/logo.png"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="themeMode" className="text-xs font-semibold">
-                  Default Color Theme
-                </Label>
-                <div className="relative">
-                  <SunMoon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  <select
-                    id="themeMode"
-                    value={themeMode}
-                    onChange={(e) => setThemeMode(e.target.value)}
-                    className="w-full h-10 pl-10 pr-3 rounded-lg border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-ring"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="themeMode" className="text-xs font-semibold">
+                      {t('settings.themePreference', 'Default Color Theme')}
+                    </Label>
+                    <div className="relative">
+                      <SunMoon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                      <select
+                        id="themeMode"
+                        value={themeMode}
+                        onChange={(e) => setThemeMode(e.target.value)}
+                        className="w-full h-10 pl-10 pr-3 rounded-lg border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="light">{t('header.themeLight', 'Light Mode')}</option>
+                        <option value="dark">{t('header.themeDark', 'Dark Mode')}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="minStock" className="text-xs font-semibold">
+                      {t('settings.defaultMinStock', 'Default Minimum Buffer (Pieces)')} *
+                    </Label>
+                    <div className="relative">
+                      <Boxes className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="minStock"
+                        type="number"
+                        value={defaultMinStock}
+                        onChange={(e) => setDefaultMinStock(parseInt(e.target.value, 10) || 0)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border/80 flex justify-end">
+                  <Button
+                    type="submit"
+                    variant="luxury"
+                    disabled={saving}
+                    className="h-10 px-6 text-xs font-bold shadow-luxury"
                   >
-                    <option value="light">Light Mode</option>
-                    <option value="dark">Dark Mode</option>
-                  </select>
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('common.loading', 'Saving Changes...')}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-1.5" />
+                        {t('settings.saveSettings', 'Save Preferences')}
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="minStock" className="text-xs font-semibold">
-                  Default Minimum Buffer (Pieces) *
-                </Label>
-                <div className="relative">
-                  <Boxes className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="minStock"
-                    type="number"
-                    value={defaultMinStock}
-                    onChange={(e) => setDefaultMinStock(parseInt(e.target.value, 10) || 0)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-border/80 flex justify-end">
-              <Button
-                type="submit"
-                variant="luxury"
-                disabled={saving}
-                className="h-10 px-6 text-xs font-bold shadow-luxury"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving Changes...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-1.5" />
-                    Save Preferences
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              </form>
+            </CardContent>
+          </Card>
       </>
       )}
     </div>

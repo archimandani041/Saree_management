@@ -9,6 +9,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { SnackbarProvider } from 'notistack';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { getTheme } from './theme/theme';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -224,7 +225,9 @@ function App() {
       <Router>
         <AuthProvider>
           <AppProvider>
-            <AppContent />
+            <LanguageProvider>
+              <AppContent />
+            </LanguageProvider>
           </AppProvider>
         </AuthProvider>
       </Router>
