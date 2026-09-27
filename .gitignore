@@ -3,3 +3,5 @@
 
 # Local env file (contains secrets — never commit)
 /env
+node_modules
+dist

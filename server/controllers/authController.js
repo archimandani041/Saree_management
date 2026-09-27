@@ -62,6 +62,11 @@ const login = async (req, res) => {
       details: { ip: req.ip }
     });
 
+    const isSuperAdmin = Boolean(
+      user.email === 'admin@saristockmanager.com' ||
+      user.role === 'superadmin'
+    );
+
     res.json({
       token,
       user: {
@@ -69,7 +74,8 @@ const login = async (req, res) => {
         username: user.username,
         role: user.role,
         full_name: user.full_name,
-        email: user.email
+        email: user.email,
+        is_superadmin: isSuperAdmin
       }
     });
   } catch (error) {
@@ -112,7 +118,18 @@ const getMe = async (req, res) => {
 
     if (error) throw error;
 
-    res.json({ user });
+    const isSuperAdmin = Boolean(
+      user.email === 'admin@saristockmanager.com' ||
+      req.user?.is_superadmin ||
+      user.role === 'superadmin'
+    );
+
+    res.json({
+      user: {
+        ...user,
+        is_superadmin: isSuperAdmin
+      }
+    });
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ error: 'Internal server error' });
