@@ -18,10 +18,8 @@ export default function RazorpayCheckoutModal({
   customerPhone = '9909680207',
   onSuccess,
 }) {
-  if (!isOpen || !plan) return null;
-
-  const planAmount = plan.amount !== undefined ? plan.amount : (plan.id === 'team' ? 399 : plan.id === 'enterprise' ? 999 : 249);
-  const planPriceDisplay = plan.price || `₹${planAmount}`;
+  const planAmount = plan?.amount !== undefined ? plan.amount : (plan?.id === 'team' ? 399 : plan?.id === 'enterprise' ? 999 : 249);
+  const planPriceDisplay = plan?.price || `₹${planAmount}`;
 
   // Tabs inside Razorpay: 'upi' | 'card' | 'netbanking' | 'wallet'
   const [selectedMethod, setSelectedMethod] = useState('upi');
@@ -120,6 +118,8 @@ export default function RazorpayCheckoutModal({
       }
     }, 1800);
   };
+
+  if (!isOpen || !plan) return null;
 
   return (
     <div
