@@ -118,11 +118,69 @@ function resolvePlanStatus(explicitStatus, daysRemaining) {
   return explicitStatus || 'ACTIVE';
 }
 
+// Helper to fetch all subscriptions from public.subscriptions table
+async function fetchDbSubscriptionsMap() {
+  const map = {};
+  try {
+    const { data, error } = await supabase.from('subscriptions').select('*');
+    if (!error && Array.isArray(data)) {
+      data.forEach((s) => {
+        map[s.user_id] = {
+          planId: s.plan_id,
+          planName: s.plan_name,
+          badge: s.badge,
+          price: s.price,
+          amount: Number(s.amount) || 0,
+          status: s.status,
+          startedAt: s.started_at,
+          renewDate: s.renew_date,
+          transactionId: s.transaction_id,
+          billingCycle: s.billing_cycle,
+          customLimits: s.custom_limits,
+          phone: s.phone,
+          notes: s.notes,
+        };
+      });
+    }
+  } catch (err) {
+    // Non-blocking fallback if table does not exist
+  }
+  return map;
+}
+
+// Helper to upsert a subscription into public.subscriptions table
+async function upsertDbSubscription(userId, record) {
+  try {
+    await supabase.from('subscriptions').upsert(
+      {
+        user_id: userId,
+        plan_id: record.planId,
+        plan_name: record.planName,
+        badge: record.badge,
+        price: record.price,
+        amount: record.amount,
+        status: record.status,
+        started_at: record.startedAt,
+        renew_date: record.renewDate,
+        transaction_id: record.transactionId,
+        billing_cycle: record.billingCycle || 'Monthly',
+        custom_limits: record.customLimits || null,
+        phone: record.phone || '',
+        notes: record.notes || '',
+      },
+      { onConflict: 'user_id' }
+    );
+  } catch (err) {
+    // Non-blocking log
+  }
+}
+
 /**
  * Fetch all registered accounts with full subscription, plan deadline, and quota details
  */
 async function getAllAccounts() {
   const localData = readLocalPlanData();
+  const dbSubscriptionsMap = await fetchDbSubscriptionsMap();
   let hasLocalUpdates = false;
 
   // 1. Fetch public.users
@@ -190,8 +248,8 @@ async function getAllAccounts() {
       user.role === 'superadmin'
     );
 
-    // Retrieve saved plan record or build default
-    let planRecord = localData[user.id] || localData[user.email?.toLowerCase()];
+    // Retrieve saved plan record from PostgreSQL table, local cache, or build default
+    let planRecord = dbSubscriptionsMap[user.id] || localData[user.id] || localData[user.email?.toLowerCase()];
 
     if (!planRecord) {
       // Determine default tier and renewal deadline
@@ -365,6 +423,9 @@ async function updateAccountPlan(userId, updates) {
   localData[userId] = updatedRecord;
   writeLocalPlanData(localData);
 
+  // Sync to PostgreSQL public.subscriptions table
+  await upsertDbSubscription(userId, updatedRecord);
+
   // Sync to Supabase Auth user metadata
   try {
     await supabase.auth.admin.updateUserById(userId, {
@@ -509,6 +570,7 @@ async function createAccount({ email, password, full_name, username, role, planI
     notes: 'Created by Super Admin',
   };
   writeLocalPlanData(localData);
+  await upsertDbSubscription(authUser.id, localData[authUser.id]);
 
   return {
     user: dbUser,
@@ -546,6 +608,7 @@ async function cancelAccountPlan(userId, { immediate = false, reason = '' } = {}
 
   localData[userId] = updatedRecord;
   writeLocalPlanData(localData);
+  await upsertDbSubscription(userId, updatedRecord);
 
   try {
     await supabase.auth.admin.updateUserById(userId, {
@@ -588,6 +651,7 @@ async function resumeAccountPlan(userId) {
 
   localData[userId] = updatedRecord;
   writeLocalPlanData(localData);
+  await upsertDbSubscription(userId, updatedRecord);
 
   try {
     await supabase.auth.admin.updateUserById(userId, {
