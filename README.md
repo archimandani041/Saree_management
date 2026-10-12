@@ -409,6 +409,8 @@ For a new Supabase project, execute the SQL migration scripts in the **Supabase 
    Enables direct photo attachments per combination SKU.
 7. **`database/multi_tenant_isolation_v2.sql`**  
    Configures Row-Level Security (RLS) policies for user data isolation.
+8. **`database/subscriptions_migration.sql`**  
+   Creates `public.subscriptions` table with automated update triggers and RLS policies for persistent tenant subscription tiers, billing cycles, and deadline tracking.
 
 <a id="default-seed-accounts"></a>
 ### Default Seed Accounts
@@ -653,8 +655,11 @@ All endpoints (except public auth, health checks, and webhooks) require a valid 
 ### Payment & Invoicing (`/api/payment`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
+| `POST` | `/api/payment/create-order` | Authenticated | Create a Razorpay order or sandbox test order |
+| `POST` | `/api/payment/verify-signature` | Authenticated | Verify cryptographic HMAC SHA256 payment signature |
 | `POST` | `/api/payment/send-receipt` | Authenticated | Generate & email B2B Tax Invoice receipt via SMTP |
 | `POST` | `/api/payment/send-cancellation` | Authenticated | Send plan cancellation confirmation email notification |
+| `POST` | `/api/payment/webhook` | Public | Razorpay webhook listener for asynchronous event capture |
 
 ### Dashboard & Analytics (`/api/dashboard`)
 | Method | Endpoint | Access | Description |
