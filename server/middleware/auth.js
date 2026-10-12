@@ -175,6 +175,14 @@ const authenticate = async (req, res, next) => {
         effectiveOwnerId = sareeOwner.owner_id;
       }
     }
+    // Identify superadmin privileges
+    const isSuperAdmin = Boolean(
+      user.email === 'admin@saristockmanager.com' ||
+      authUser.user_metadata?.is_superadmin === true ||
+      authUser.user_metadata?.role === 'superadmin' ||
+      user.role === 'superadmin'
+    );
+
     // Attach to request
     req.user = {
       id: user.id,
@@ -182,7 +190,8 @@ const authenticate = async (req, res, next) => {
       username: user.username,
       role: user.role,
       full_name: user.full_name,
-      email: user.email
+      email: user.email,
+      is_superadmin: isSuperAdmin
     };
 
     next();

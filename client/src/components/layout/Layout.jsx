@@ -3,6 +3,7 @@
  * Unifies Sidebar, Header, Global Search, and Content Area
  * Built with shadcn/ui design language and Tailwind CSS
  */
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import GlobalSearchDialog from '../common/GlobalSearchDialog';
@@ -28,7 +29,7 @@ const Layout = ({ children }) => {
         {/* Scrollable Page Viewport */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
           <div className="container mx-auto px-4 py-6 max-w-7xl">
-            {children}
+            {children || <Outlet />}
           </div>
         </main>
       </div>

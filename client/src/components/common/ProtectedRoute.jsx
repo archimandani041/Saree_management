@@ -6,8 +6,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles, superAdminOnly = false, userOnly = false }) => {
+  const { isAuthenticated, user, loading, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -23,7 +23,15 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Allow access to all authenticated users
+  // Super Admin Exclusive Pages (e.g. /admin/accounts)
+  if (superAdminOnly && !isSuperAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Regular Boutique User Pages (e.g. /dashboard, /sarees, /low-stock, etc.)
+  if (userOnly && isSuperAdmin) {
+    return <Navigate to="/admin/accounts" replace />;
+  }
 
   return children;
 };

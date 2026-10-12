@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useDebouncedCallback } from '../hooks/useDebounce';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -56,6 +57,7 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
 
   // State Management
   const [data, setData] = useState(null);
@@ -210,7 +212,7 @@ const Dashboard = () => {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Dashboard
+              {t('nav.dashboard', 'Dashboard')}
             </h1>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/60 border border-border text-[11px] font-semibold">
               <span
@@ -229,7 +231,7 @@ const Dashboard = () => {
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Enterprise overview of live warehouse inventory, distribution analytics, and AI forecasts.
+            {t('dashboard.subtitle', 'Enterprise overview of live warehouse inventory, distribution analytics, and AI forecasts.')}
           </p>
         </div>
 
@@ -257,13 +259,13 @@ const Dashboard = () => {
             onChange={(e) => setDateRange(e.target.value)}
             className="h-9 px-3 rounded-lg border border-input bg-background text-xs font-semibold text-foreground focus:ring-2 focus:ring-ring"
           >
-            <option value="today">Today</option>
-            <option value="7days">Last 7 Days</option>
-            <option value="30days">Last 30 Days</option>
-            <option value="3months">Last 3 Months</option>
-            <option value="6months">Last 6 Months</option>
-            <option value="12months">Last 12 Months</option>
-            <option value="custom">Custom Range</option>
+            <option value="today">{t('dashboard.today', 'Today')}</option>
+            <option value="7days">{t('dashboard.last7Days', 'Last 7 Days')}</option>
+            <option value="30days">{t('dashboard.last30Days', 'Last 30 Days')}</option>
+            <option value="3months">{t('dashboard.last3Months', 'Last 3 Months')}</option>
+            <option value="6months">{t('dashboard.last6Months', 'Last 6 Months')}</option>
+            <option value="12months">{t('dashboard.last12Months', 'Last 12 Months')}</option>
+            <option value="custom">{t('dashboard.customRange', 'Custom Range')}</option>
           </select>
 
           <Button
@@ -274,7 +276,7 @@ const Dashboard = () => {
               fetchDashboardData();
               if (selectedSaree?.id) fetchPrediction(selectedSaree.id, forecastHorizon);
             }}
-            title="Refresh Metrics"
+            title={t('common.refresh', 'Refresh Metrics')}
             className="h-9 w-9 text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin text-burgundy-900")} />
@@ -295,7 +297,7 @@ const Dashboard = () => {
           )}
         >
           <LayoutDashboard className="w-4 h-4" />
-          <span>Operational Overview</span>
+          <span>{t('dashboard.operationalOverview', 'Operational Overview')}</span>
         </button>
 
         <button
@@ -309,7 +311,7 @@ const Dashboard = () => {
           )}
         >
           <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>AI Demand Forecast</span>
+          <span>{t('dashboard.demandForecast', 'AI Demand Forecast')}</span>
         </button>
       </div>
 
@@ -323,7 +325,7 @@ const Dashboard = () => {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Catalog Items
+                    {t('dashboard.catalogItems', 'Catalog Items')}
                   </span>
                   <div className="p-2 rounded-xl bg-burgundy-900/10 text-burgundy-900 dark:text-burgundy-300">
                     <Shirt className="w-4 h-4" />
@@ -335,7 +337,7 @@ const Dashboard = () => {
                   </span>
                 </div>
                 <span className="text-[11px] text-muted-foreground mt-1 block">
-                  Master saree designs registered
+                  {t('dashboard.masterSareesRegistered', 'Master saree designs registered')}
                 </span>
               </CardContent>
             </Card>
@@ -345,7 +347,7 @@ const Dashboard = () => {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Available Stock
+                    {t('dashboard.totalStock', 'Available Stock')}
                   </span>
                   <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
                     <Package className="w-4 h-4" />
@@ -355,10 +357,10 @@ const Dashboard = () => {
                   <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
                     {(stats.currentStock ?? 0).toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground font-semibold">pcs</span>
+                  <span className="text-xs text-muted-foreground font-semibold">{t('common.pcs', 'pcs')}</span>
                 </div>
                 <span className="text-[11px] text-muted-foreground mt-1 block">
-                  Physical warehouse volume
+                  {t('dashboard.warehouseVolume', 'Physical warehouse volume')}
                 </span>
               </CardContent>
             </Card>
@@ -368,7 +370,7 @@ const Dashboard = () => {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Dispatched Out
+                    {t('dashboard.dispatchedOut', 'Dispatched Out')}
                   </span>
                   <div className="p-2 rounded-xl bg-destructive/10 text-destructive">
                     <Truck className="w-4 h-4" />
@@ -378,7 +380,7 @@ const Dashboard = () => {
                   <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
                     {(stats.delivered ?? 0).toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground font-semibold">pcs</span>
+                  <span className="text-xs text-muted-foreground font-semibold">{t('common.pcs', 'pcs')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   {typeof stats?.comparison?.deliveredPercent === 'number' && (
@@ -394,7 +396,7 @@ const Dashboard = () => {
                       {stats.comparison.deliveredPercent}%
                     </span>
                   )}
-                  <span className="text-[11px] text-muted-foreground">vs prior range</span>
+                  <span className="text-[11px] text-muted-foreground">{t('dashboard.vsPriorRange', 'vs prior range')}</span>
                 </div>
               </CardContent>
             </Card>
@@ -404,7 +406,7 @@ const Dashboard = () => {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Replenished In
+                    {t('dashboard.replenishedIn', 'Replenished In')}
                   </span>
                   <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
                     <TrendingUp className="w-4 h-4" />
@@ -414,7 +416,7 @@ const Dashboard = () => {
                   <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
                     {(stats.added ?? 0).toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground font-semibold">pcs</span>
+                  <span className="text-xs text-muted-foreground font-semibold">{t('common.pcs', 'pcs')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   {typeof stats?.comparison?.addedPercent === 'number' && (
@@ -430,7 +432,7 @@ const Dashboard = () => {
                       {stats.comparison.addedPercent}%
                     </span>
                   )}
-                  <span className="text-[11px] text-muted-foreground">vs prior range</span>
+                  <span className="text-[11px] text-muted-foreground">{t('dashboard.vsPriorRange', 'vs prior range')}</span>
                 </div>
               </CardContent>
             </Card>
@@ -450,7 +452,7 @@ const Dashboard = () => {
                     <AlertTriangle className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-muted-foreground">
-                    Low Stock: <strong className="text-amber-600 font-bold">{stats.lowStock}</strong>
+                    {t('dashboard.lowStock', 'Low Stock')}: <strong className="text-amber-600 font-bold">{stats.lowStock}</strong>
                   </span>
                 </button>
 
@@ -466,7 +468,7 @@ const Dashboard = () => {
                     <AlertCircle className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-muted-foreground">
-                    Depleted: <strong className="text-destructive font-bold">{stats.outOfStock}</strong>
+                    {t('dashboard.depleted', 'Depleted')}: <strong className="text-destructive font-bold">{stats.outOfStock}</strong>
                   </span>
                 </button>
 
@@ -482,7 +484,7 @@ const Dashboard = () => {
                     <Clock className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-muted-foreground">
-                    Pending Orders: <strong className="text-blue-600 font-bold">{stats.pendingRequests}</strong>
+                    {t('dashboard.pendingOrders', 'Pending Orders')}: <strong className="text-blue-600 font-bold">{stats.pendingRequests}</strong>
                   </span>
                 </button>
 
@@ -498,7 +500,7 @@ const Dashboard = () => {
                     <RotateCcw className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-muted-foreground">
-                    Rollbacks Today: <strong className="text-purple-600 font-bold">{stats.todayRollbacks || 0}</strong>
+                    {t('dashboard.rollbacksToday', 'Rollbacks Today')}: <strong className="text-purple-600 font-bold">{stats.todayRollbacks || 0}</strong>
                   </span>
                 </button>
               </div>
@@ -509,7 +511,7 @@ const Dashboard = () => {
                 onClick={() => navigate('/stock-requests')}
                 className="text-xs font-bold h-8 px-3 shadow-xs shrink-0"
               >
-                + New Stock Request
+                + {t('nav.newRequest', 'New Stock Request')}
               </Button>
             </CardContent>
           </Card>
@@ -520,9 +522,9 @@ const Dashboard = () => {
             <Card className="lg:col-span-8 border border-border shadow-luxury">
               <CardHeader className="p-5 pb-2 flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">Inventory Flow Telemetry</CardTitle>
+                  <CardTitle className="text-base">{t('dashboard.inventoryFlow', 'Inventory Flow Telemetry')}</CardTitle>
                   <CardDescription className="text-xs">
-                    Comparative timeline of additions vs customer dispatches
+                    {t('dashboard.comparativeTimeline', 'Comparative timeline of additions vs customer dispatches')}
                   </CardDescription>
                 </div>
 
@@ -539,7 +541,7 @@ const Dashboard = () => {
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      {grp}
+                      {grp === 'daily' ? t('dashboard.daily', 'Daily') : grp === 'weekly' ? t('dashboard.weekly', 'Weekly') : t('dashboard.monthly', 'Monthly')}
                     </button>
                   ))}
                 </div>
@@ -572,13 +574,13 @@ const Dashboard = () => {
                         <Legend verticalAlign="top" height={32} iconType="circle" />
                         <Bar
                           dataKey="stockAdded"
-                          name="Stock In"
+                          name={t('dashboard.quickStockIn', 'Stock In')}
                           fill="#22C55E"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="stockDelivered"
-                          name="Dispatched"
+                          name={t('dashboard.quickStockOut', 'Dispatched')}
                           fill="#EF4444"
                           radius={[4, 4, 0, 0]}
                         />
@@ -592,7 +594,7 @@ const Dashboard = () => {
             {/* Health Analytics Card */}
             <Card className="lg:col-span-4 border border-border shadow-luxury flex flex-col justify-between">
               <CardHeader className="p-5 pb-2">
-                <CardTitle className="text-base">Efficiency & Run-Rate</CardTitle>
+                <CardTitle className="text-base">{t('dashboard.efficiency', 'Efficiency & Run-Rate')}</CardTitle>
                 <CardDescription className="text-xs">
                   Inventory turnover velocity & safety runway
                 </CardDescription>
@@ -602,7 +604,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-border/60">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                      Turnover Velocity
+                      {t('dashboard.turnoverVelocity', 'Turnover Velocity')}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       % stock cleared in period
@@ -616,21 +618,21 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-border/60">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                      Average Outflow
+                      {t('dashboard.averageOutflow', 'Average Outflow')}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       Mean daily pieces dispatched
                     </span>
                   </div>
                   <span className="font-mono text-2xl font-bold text-foreground">
-                    {avgDailyDelivery} <span className="text-xs font-normal">pcs</span>
+                    {avgDailyDelivery} <span className="text-xs font-normal">{t('common.pcs', 'pcs')}</span>
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                      Stock Runway
+                      {t('dashboard.stockRunway', 'Stock Runway')}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       Duration until depletion
@@ -651,7 +653,7 @@ const Dashboard = () => {
                   className="w-full text-xs font-bold h-9 mt-4"
                   onClick={() => navigate('/history')}
                 >
-                  Inspect Full Audit Ledger
+                  {t('dashboard.inspectLedger', 'Inspect Full Audit Ledger')}
                   <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
               </CardContent>
@@ -689,7 +691,7 @@ const Dashboard = () => {
                 <div>
                   <CardTitle className="text-base text-destructive flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" />
-                    Needs Attention
+                    {t('dashboard.needsAttention', 'Needs Attention')}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Depleted combinations requiring replenishment
@@ -701,7 +703,7 @@ const Dashboard = () => {
                   onClick={() => navigate('/low-stock')}
                   className="text-xs font-bold"
                 >
-                  View All
+                  {t('common.view', 'View All')}
                 </Button>
               </CardHeader>
 
@@ -753,7 +755,7 @@ const Dashboard = () => {
                           }}
                           className="h-7 px-2 text-[11px] font-bold"
                         >
-                          View
+                          {t('common.view', 'View')}
                         </Button>
                       </div>
                     </div>
@@ -768,7 +770,7 @@ const Dashboard = () => {
                 <div>
                   <CardTitle className="text-base text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                     <Zap className="w-4 h-4" />
-                    Demand Opportunities
+                    {t('dashboard.demandOpportunities', 'Demand Opportunities')}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Fast-moving sarees trending with buyers
@@ -780,7 +782,7 @@ const Dashboard = () => {
                   onClick={() => navigate('/sarees')}
                   className="text-xs font-bold"
                 >
-                  View Catalog
+                  {t('dashboard.viewCatalog', 'View Catalog')}
                 </Button>
               </CardHeader>
 
@@ -847,7 +849,7 @@ const Dashboard = () => {
             {/* Top Performing Table */}
             <Card className="lg:col-span-7 border border-border shadow-luxury">
               <CardHeader className="p-5 pb-2">
-                <CardTitle className="text-base">Top Performing Series</CardTitle>
+                <CardTitle className="text-base">{t('dashboard.topPerforming', 'Top Performing Series')}</CardTitle>
                 <CardDescription className="text-xs">
                   Highest volume dispatch items with stock runway
                 </CardDescription>
@@ -858,11 +860,11 @@ const Dashboard = () => {
                   <Table>
                     <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead className="text-xs font-bold">Series Code</TableHead>
-                        <TableHead className="text-xs font-bold text-right">Delivered</TableHead>
-                        <TableHead className="text-xs font-bold text-right">In Stock</TableHead>
-                        <TableHead className="text-xs font-bold text-right">Trend</TableHead>
-                        <TableHead className="text-xs font-bold text-right">Runway</TableHead>
+                        <TableHead className="text-xs font-bold">{t('dashboard.seriesCode', 'Series Code')}</TableHead>
+                        <TableHead className="text-xs font-bold text-right">{t('dashboard.delivered', 'Delivered')}</TableHead>
+                        <TableHead className="text-xs font-bold text-right">{t('dashboard.inStock', 'In Stock')}</TableHead>
+                        <TableHead className="text-xs font-bold text-right">{t('dashboard.trend', 'Trend')}</TableHead>
+                        <TableHead className="text-xs font-bold text-right">{t('dashboard.runway', 'Runway')}</TableHead>
                         <TableHead className="text-xs font-bold text-right"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -926,7 +928,7 @@ const Dashboard = () => {
             {/* Recent Activity List */}
             <Card className="lg:col-span-5 border border-border shadow-luxury">
               <CardHeader className="p-5 pb-2">
-                <CardTitle className="text-base">Recent Ledger Operations</CardTitle>
+                <CardTitle className="text-base">{t('dashboard.recentLedger', 'Recent Ledger Operations')}</CardTitle>
                 <CardDescription className="text-xs">
                   Live feed of latest inventory updates
                 </CardDescription>
@@ -1009,7 +1011,7 @@ const Dashboard = () => {
                   <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <CardTitle className="text-lg">Predictive Saree Demand Engine</CardTitle>
+                  <CardTitle className="text-lg">{t('dashboard.predictiveEngine', 'Predictive Saree Demand Engine')}</CardTitle>
                 </div>
                 <CardDescription className="text-xs mt-1">
                   AI-powered replenishment requirements factoring velocity and safe runway
@@ -1084,13 +1086,13 @@ const Dashboard = () => {
                         >
                           <span className="text-[10px] font-bold uppercase tracking-wider block">
                             {predictionData.forecast?.recommendedOrderQty > 0
-                              ? "Replenishment Recommended"
-                              : "Inventory Healthy"}
+                              ? t('dashboard.replenishmentRecommended', 'Replenishment Recommended')
+                              : t('dashboard.inventoryHealthy', 'Inventory Healthy')}
                           </span>
                           <span className="text-2xl font-bold font-mono block">
                             {predictionData.forecast?.recommendedOrderQty > 0
-                              ? `+${predictionData.forecast.recommendedOrderQty} pcs`
-                              : "Optimal Levels"}
+                              ? `+${predictionData.forecast.recommendedOrderQty} ${t('common.pcs', 'pcs')}`
+                              : t('dashboard.optimalLevels', 'Optimal Levels')}
                           </span>
                           <span className="text-[11px] opacity-80 block">
                             {predictionData.forecast?.recommendedOrderQty > 0
@@ -1102,31 +1104,31 @@ const Dashboard = () => {
                         <div className="grid grid-cols-2 gap-3 pt-4">
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                              Current Stock
+                              {t('dashboard.totalStock', 'Current Stock')}
                             </span>
                             <span className="font-mono text-base font-bold text-foreground">
-                              {predictionData.forecast?.currentStock} pcs
+                              {predictionData.forecast?.currentStock} {t('common.pcs', 'pcs')}
                             </span>
                           </div>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                              Daily Run-Rate
+                              {t('dashboard.averageOutflow', 'Daily Run-Rate')}
                             </span>
                             <span className="font-mono text-base font-bold text-foreground">
-                              {predictionData.forecast?.avgDailyDemand} pcs
+                              {predictionData.forecast?.avgDailyDemand} {t('common.pcs', 'pcs')}
                             </span>
                           </div>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                              Horizon Demand
+                              {t('dashboard.predictedRequirement', 'Horizon Demand')}
                             </span>
                             <span className="font-mono text-base font-bold text-foreground">
-                              {predictionData.forecast?.forecastDemand} pcs
+                              {predictionData.forecast?.forecastDemand} {t('common.pcs', 'pcs')}
                             </span>
                           </div>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                              Cover Remaining
+                              {t('dashboard.stockRunway', 'Cover Remaining')}
                             </span>
                             <span className="font-mono text-base font-bold text-foreground">
                               {predictionData.forecast?.daysRemaining}
@@ -1221,7 +1223,7 @@ const Dashboard = () => {
                         <div className="flex items-center gap-2">
                           <Sparkles className="w-4 h-4 text-amber-500" />
                           <span className="text-xs font-bold text-foreground">
-                            Intelligence Synthesis
+                            {t('dashboard.intelligenceSynthesis', 'Intelligence Synthesis')}
                           </span>
                         </div>
                         <p className="text-xs italic text-muted-foreground leading-relaxed">
@@ -1231,7 +1233,7 @@ const Dashboard = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                           <div className="space-y-1">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-destructive block">
-                              Identified Risks
+                              {t('dashboard.identifiedRisks', 'Identified Risks')}
                             </span>
                             {predictionData.aiAnalysis?.risks?.length ? (
                               predictionData.aiAnalysis.risks.map((risk, idx) => (
