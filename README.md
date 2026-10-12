@@ -1,5 +1,9 @@
 # 🧵 Sari Stock Management System (KP & KPR Creation)
 
+<p align="center">
+  <img src="client/public/saree-hero.jpg" alt="Sari Stock Management System Banner" width="100%" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" />
+</p>
+
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
@@ -8,43 +12,49 @@
 [![Express](https://img.shields.io/badge/Express-5.2-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_15-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-Vision_OCR-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![i18n](https://img.shields.io/badge/Language-English%20%7C%20%E0%AA%97%E0%AB%81%E0%AA%9C%E0%AA%B0%E0%AA%BE%E0%AA%A4%E0%AB%80%20%7C%20%E0%A4%B9%E0%A4%BF%E0%A4%82%E0%A4%A6%E0%A4%82-FF6F00)](client/src/i18n/translations.js)
+[![License](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
 
-Welcome to the **Sari Stock Management System** — a modern, full-stack enterprise inventory coordination and production tracking platform engineered specifically for textile manufacturers, weavers, and sari wholesale distributors.
+Welcome to the **Sari Stock Management System** — a modern, full-stack enterprise inventory coordination, loom production tracking, and B2B SaaS platform engineered specifically for textile manufacturers, weavers, and sari wholesale distributors.
 
-Designed for high-velocity operations, the platform manages multi-shop inventories (**KP Creation** & **KPR Creation**), complete loom production structures (Saree ➔ Beams ➔ Combinations ➔ Colors), automated **WhatsApp message & screenshot OCR parsing**, tamper-proof **transaction history ledgers with 1-click rollbacks**, intelligent **duplicate entry prevention**, and **supplier purchase ordering**.
+Designed for high-velocity operations, the platform manages multi-shop inventories (**KP Creation** & **KPR Creation**), complete loom production structures (Saree ➔ Beams ➔ Combinations ➔ Colors), automated **WhatsApp message & screenshot OCR parsing**, tamper-proof **transaction history ledgers with 1-click rollbacks**, intelligent **duplicate entry prevention**, **supplier purchase ordering**, multi-language internationalization (**English, Gujarati, Hindi**), and a full **subscription billing & tax invoice dispatch engine**.
 
 ---
 
 ## 📖 Table of Contents
 
-- [Key Features](#-key-features)
-- [System Architecture & Data Flows](#-system-architecture--data-flows)
+- [Key Features](#key-features)
+- [System Architecture & Data Flows](#system-architecture)
   - [Hierarchical Data Model](#hierarchical-data-model)
-  - [WhatsApp & Vision OCR Ingestion Pipeline](#whatsapp--vision-ocr-ingestion-pipeline)
-  - [Multi-Shop Isolation Architecture](#multi-shop-isolation-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Directory Layout](#-project-directory-layout)
-- [Getting Started](#-getting-started)
+  - [WhatsApp & Vision OCR Ingestion Pipeline](#ocr-pipeline)
+  - [Multi-Shop Isolation Architecture](#shop-isolation-architecture)
+- [Tech Stack](#tech-stack)
+- [Project Directory Layout](#project-directory-layout)
+- [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Backend Configuration (`server/.env`)](#backend-configuration-serverenv)
-  - [Frontend Configuration (`client/.env`)](#frontend-configuration-clientenv)
+  - [Backend Configuration (`server/.env`)](#backend-configuration)
+  - [Frontend Configuration (`client/.env`)](#frontend-configuration)
   - [Installation](#installation)
   - [Running the Application](#running-the-application)
-- [Database Schema & Migration Sequence](#-database-schema--migration-sequence)
+- [Database Schema & Migration Sequence](#database-schema)
   - [Default Seed Accounts](#default-seed-accounts)
-- [Advanced Subsystems](#-advanced-subsystems)
-  - [WhatsApp Text & Screenshot OCR Parser](#1-whatsapp-text--screenshot-ocr-parser)
-  - [Multi-Shop Isolation (KP vs. KPR)](#2-multi-shop-isolation-kp-vs-kpr)
-  - [Duplicate Entry Detection & Protection](#3-duplicate-entry-detection--protection)
-  - [Audit Ledger, Rollback & Undo](#4-audit-ledger-rollback--undo)
-  - [Supplier CRM & WhatsApp Purchase Orders](#5-supplier-crm--whatsapp-purchase-orders)
-- [REST API Endpoints Reference](#-rest-api-endpoints-reference)
-- [Security, RLS & Rate Limiting](#-security-rls--rate-limiting)
-- [Production Deployment](#-production-deployment)
-- [License](#-license)
+- [Advanced Subsystems](#advanced-subsystems)
+  - [1. WhatsApp Text & Screenshot OCR Parser](#subsystem-whatsapp-ocr)
+  - [2. Multi-Shop Isolation (KP vs. KPR)](#subsystem-multi-shop)
+  - [3. Duplicate Entry Detection & Protection](#subsystem-duplicate-detection)
+  - [4. Audit Ledger, Rollback & Undo](#subsystem-audit-ledger)
+  - [5. Supplier CRM & WhatsApp Purchase Orders](#subsystem-supplier-crm)
+  - [6. Multi-Language Support (i18n)](#subsystem-i18n)
+  - [7. Subscription Billing, Quota Meters & Tax Invoices](#subsystem-billing-invoices)
+  - [8. Super Admin Platform Console](#subsystem-super-admin)
+- [REST API Endpoints Reference](#api-reference)
+- [Security, RLS & Rate Limiting](#security-rls)
+- [Production Deployment](#production-deployment)
+- [License](#license)
 
 ---
 
+<a id="key-features"></a>
 ## ✨ Key Features
 
 ### 🧵 Textile-Native Hierarchical Inventory
@@ -65,6 +75,18 @@ Eliminates structural ambiguity by aligning digital records directly with weavin
 * **Confidence Scoring & Status Taxonomy**: Visual confidence gauge (0–100%) and canonical classification: `NEW_SARI`, `NEW_COMBINATION`, `SARI_EXISTS`, `COMBINATION_EXISTS`, `SIMILAR`, `DUPLICATE_IN_MESSAGE`, `MISSING_INFO`, `INVALID`.
 * **Interactive Pre-Import Editor**: Review parsed batches in an editable table, resolve warnings, adjust quantities or color mappings, toggle rows, and commit verified records in a single click.
 
+### 🌐 Multi-Language Localization (English, Gujarati, Hindi)
+* Native trilingual interface designed for Indian textile hubs (Surat, Ahmedabad, Varanasi, Kanchipuram).
+* Seamless instant toggling between **English**, **Gujarati (ગુજરાતી)**, and **Hindi (हिंदी)** across the header, navigation, modals, and settings without reloading the page.
+* Fully translated terminology tailored for textile artisans, weavers, and boutique operators.
+
+### 💳 SaaS Subscription Billing, Quota Meters & Tax Invoices
+* 3-tier subscription model: **Boutique / Starter** (₹149/mo), **Production / Pro** (₹399/mo), and **Enterprise** (₹999/mo).
+* Real-time plan limit tracker in the sidebar and settings displaying usage against quotas (saree designs, cloud storage, staff seats).
+* Evaluator sandbox payment gateway modal featuring an authentic **Google Pay UPI QR Code**, 3D Secure OTP simulation, RuPay/Visa/Mastercard presets, and GST tax breakdown.
+* Automated **B2B GST Tax Invoice receipts** dispatched via email with Nodemailer SMTP (supports live Gmail/SMTP or Ethereal sandbox test accounts) and pre-formatted executive WhatsApp thank-you previews.
+* Self-service plan cancellation dialog with reason telemetry and 1-click plan reactivation.
+
 ### 🛡️ Duplicate Entry Prevention
 * Real-time validation checks for existing series codes, duplicate combinations, and overlapping WhatsApp entries within configurable timeframes.
 * Prevents multiple staff members or weavers from logging the same shipment or stock cut twice.
@@ -79,15 +101,22 @@ Eliminates structural ambiguity by aligning digital records directly with weavin
 * Detect items dipping below safety thresholds and auto-generate stock replenishment requests.
 * **1-Click WhatsApp PO Generator**: Formats purchase orders with clean markdown (`*bold*` series headers, itemized F-color quantities, and order references) ready to send to mills and dye houses.
 
+### 👑 Super Admin Platform Console (`/admin/accounts`)
+* Dedicated platform governance workspace for system owners and administrators.
+* View and filter all registered organization tenant accounts, active plans, subscription expiry dates, and account health.
+* Upgrade/downgrade subscription tiers, extend plan deadlines, toggle account access, or cancel/reactivate subscriptions.
+
 ### 💎 Modern Luxury UI-2.0 & SaaS Landing Page
 * Re-engineered using **shadcn/ui**, **Radix UI**, and **Tailwind CSS** with a warm luxury textile aesthetic.
-* High-converting SaaS landing page featuring an animated hero with real sari photography, feature spotlights, workflow breakdowns, transparent 3-tier pricing (Pro, Team, Enterprise), and instant demo booking.
+* High-converting SaaS landing page featuring an animated hero with authentic sari photography, feature spotlights, workflow breakdowns, transparent 3-tier pricing, and instant demo booking.
 * Rich dashboard with KPI cards, stock trends, global search modal (`Ctrl/Cmd + K`), barcode generation (`JsBarcode`), QR code tags (`qrcode.react`), and export to PDF/Excel.
 
 ---
 
+<a id="system-architecture"></a>
 ## 🏗 System Architecture & Data Flows
 
+<a id="hierarchical-data-model"></a>
 ### Hierarchical Data Model
 
 ```mermaid
@@ -105,7 +134,7 @@ erDiagram
         uuid id PK
         string series_base
         string series_letter
-        string brand "KP | KPR"
+        string brand "KP or KPR"
         string saree_name
         uuid owner_id FK
     }
@@ -113,13 +142,13 @@ erDiagram
     BEAMS {
         uuid id PK
         uuid saree_id FK
-        string beam_name "White Beam / Black Beam"
+        string beam_name "White or Black Beam"
     }
 
     COMBINATIONS {
         uuid id PK
         uuid beam_id FK
-        string brand "KP | KPR"
+        string brand "KP or KPR"
         integer current_stock
         integer min_stock_alert
     }
@@ -127,34 +156,36 @@ erDiagram
     COMBINATION_COLORS {
         uuid id PK
         uuid combination_id FK
-        string color_name "F-1, F-2, etc."
+        string color_name "F-1 to F-8"
         integer quantity
     }
 ```
 
+<a id="ocr-pipeline"></a>
 ### WhatsApp & Vision OCR Ingestion Pipeline
 
 ```mermaid
 flowchart TD
     A["Raw Input"] --> B{"Input Type?"}
-    B -- "Screenshot Image" --> C["Google Gemini Vision OCR<br/>(Verbatim Transcription)"]
-    B -- "Pasted Chat Text" --> D["Noise Filter<br/>(Strip Timestamps, Emojis, Phone Nos)"]
+    B -->|"Screenshot Image"| C["Google Gemini Vision OCR: Verbatim Transcription"]
+    B -->|"Pasted Chat Text"| D["Noise Filter: Strip Timestamps, Emojis, Chatter"]
     C --> D
-    D --> E["Shop Partitioning<br/>(Extract KP / KPR Markers)"]
-    E --> F["Block Splitter<br/>(Group by Series / Design)"]
-    F --> G["Block Parser<br/>(Extract Beams, F-Colors, Stocks)"]
-    G --> H["In-Message Analyzer<br/>(Detect Outliers & Message Duplicates)"]
-    H --> I["Database Taxonomy & Duplicate Check<br/>(NEW_SARI, SARI_EXISTS, etc.)"]
-    I --> J["Interactive Review Modal<br/>(Inline Edit & Confidence Badges)"]
-    J --> K["Batch Commit to Supabase<br/>(Update Stock + Write Audit Ledger)"]
+    D --> E["Shop Partitioning: Extract KP or KPR Markers"]
+    E --> F["Block Splitter: Group by Series or Design"]
+    F --> G["Block Parser: Extract Beams, F-Colors, Stocks"]
+    G --> H["In-Message Analyzer: Detect Outliers & Duplicates"]
+    H --> I["Database Taxonomy Check: NEW_SARI, SARI_EXISTS, etc."]
+    I --> J["Interactive Review Modal: Inline Edit & Confidence Badges"]
+    J --> K["Batch Commit to Supabase: Update Stock & Write Audit Ledger"]
 ```
 
+<a id="shop-isolation-architecture"></a>
 ### Multi-Shop Isolation Architecture
 
 ```mermaid
 flowchart LR
     subgraph Client["Frontend Application (UI-2.0)"]
-        Filter["Shop Switcher: All | KP | KPR"]
+        Filter["Shop Switcher: All / KP / KPR"]
     end
 
     subgraph API["Express Gateway (/api)"]
@@ -162,9 +193,9 @@ flowchart LR
     end
 
     subgraph Database["Supabase PostgreSQL"]
-        KP["KP Creation Data<br/>(brand = 'KP')"]
-        KPR["KPR Creation Data<br/>(brand = 'KPR')"]
-        Constraint["UNIQUE(series_base, series_letter, owner_id, brand)"]
+        KP["KP Creation Inventory (brand = KP)"]
+        KPR["KPR Creation Inventory (brand = KPR)"]
+        Constraint["Compound UNIQUE Constraint: series_base, series_letter, owner_id, brand"]
     end
 
     Client --> API
@@ -175,40 +206,47 @@ flowchart LR
 
 ---
 
+<a id="tech-stack"></a>
 ## 🛠 Tech Stack
 
 | Domain | Technology | Details |
 | :--- | :--- | :--- |
-| **Frontend Framework** | React 19 + Vite 8 | Ultra-fast build toolchain with Hot Module Replacement |
+| **Frontend Framework** | React 19 + Vite 8 | Ultra-fast build toolchain with Hot Module Replacement (HMR) |
 | **Design System** | Tailwind CSS v3 + Radix UI | Custom luxury theme built on shadcn/ui component primitives |
 | **Component Library** | Material UI (MUI) v9 + Emotion | Specialized forms, dynamic modals, and smooth animations |
 | **Icons & Media** | Lucide React + MUI Icons | Crisp vector iconography |
-| **Routing & State** | React Router v7 + Context API | Protected route wrappers and granular auth/tenant state |
+| **Routing & State** | React Router v7 + Context API | Protected route wrappers, auth, language, and tenant state |
+| **Localization (i18n)** | Custom LanguageContext | Lightweight multi-language engine (English, Gujarati, Hindi) |
 | **Charts & Metrics** | Recharts 3.9 | Interactive area charts, stock trend graphs, and KPI visualizers |
 | **Barcodes & Print** | JsBarcode + QRCode.react + jsPDF | Barcode labeling, QR generation, PDF reports, Excel (`xlsx`) export |
-| **Backend Runtime** | Node.js (v18+) + Express 5 | High-performance RESTful API with structured routing |
-| **Database & Auth** | Supabase (PostgreSQL 15) | Row-Level Security (RLS), triggers, constraints, JWT auth |
+| **Backend Runtime** | Node.js (v18+) + Express 5 | High-performance RESTful API with modular routing |
+| **Database & Auth** | Supabase (PostgreSQL 15) | Row-Level Security (RLS), compound uniqueness constraints, JWT auth |
 | **Artificial Intelligence** | Google Gemini Vision (2.0 Flash) | Screenshot OCR extraction and demand forecast analytics |
-| **Security & Middleware** | Helmet, CORS, Express-Rate-Limit | Multi-tier rate limiting, secure headers, proxy trust configuration |
+| **Email & Invoicing** | Nodemailer | Automated B2B Tax Invoice delivery via SMTP (Gmail / Ethereal) |
+| **Security & Middleware** | Helmet, CORS, Express-Rate-Limit | Multi-tier rate limiting, secure headers, reverse proxy trust |
 
 ---
 
+<a id="project-directory-layout"></a>
 ## 📂 Project Directory Layout
 
 ```text
-Saree_management/
+Sari_management/
 ├── client/                               # Frontend Single Page Application
-│   ├── public/                           # Static assets, hero images, and branding
+│   ├── public/                           # Static assets: saree-hero.jpg, upi-qr.jpeg, favicons
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── common/                   # GlobalSearchDialog, WhatsAppImportDialog, ProtectedRoute
-│   │   │   ├── layout/                   # Header, Sidebar, Layout wrappers
+│   │   │   ├── common/                   # PaymentGatewayModal, RazorpayCheckoutModal, CancelPlanModal,
+│   │   │   │                             # GlobalSearchDialog, WhatsAppImportDialog, ProtectedRoute, ErrorBoundary
+│   │   │   ├── layout/                   # Header, Sidebar (with plan quota meters), Layout wrappers
 │   │   │   └── ui/                       # shadcn/ui primitives (button, card, dialog, table, badge, etc.)
-│   │   ├── contexts/                     # AuthContext (Supabase session), AppContext (Theme & Shop)
+│   │   ├── contexts/                     # AuthContext, AppContext (Theme & Shop), LanguageContext (i18n)
+│   │   ├── i18n/                         # translations.js (English, Gujarati, Hindi dictionaries)
 │   │   ├── lib/                          # Utility helpers (cn, formatters)
 │   │   ├── pages/                        # LandingPage, Dashboard, AllSarees, LowStock, StockHistory,
-│   │   │                                 # StockRequests, SareeDetail, SareeForm, SareeEdit, Settings, Login
-│   │   ├── services/                     # Axios API client (api.js), Supabase client (supabase.js)
+│   │   │                                 # StockRequests, SareeDetail, SareeForm, SareeEdit, Settings,
+│   │   │                                 # BillingUsage, AdminAccounts, Login, AuthCallback, SetNewPassword
+│   │   ├── services/                     # api.js (Axios), supabase.js, subscriptionService.js
 │   │   └── theme/                        # Palette configuration and luxury styling tokens
 │   ├── index.html                        # Application entry HTML
 │   ├── package.json                      # Client dependencies & scripts
@@ -218,13 +256,16 @@ Saree_management/
 ├── server/                               # Backend REST API Server
 │   ├── config/                           # Supabase admin client configuration
 │   ├── controllers/                      # authController, sareeController, stockController,
-│   │                                     # parserController, duplicateController, supplierController, etc.
+│   │                                     # parserController, duplicateController, supplierController,
+│   │                                     # adminController, dashboardController, etc.
+│   ├── data/                             # accounts_plan_data.json (Tenant billing & plan states)
 │   ├── middleware/                       # auth (JWT), validation, rate-limiting, error handler
 │   ├── routes/                           # auth, sarees, stock, suppliers, stockRequests, parser,
-│   │                                     # dashboard, settings, upload, duplicates
+│   │                                     # dashboard, settings, upload, duplicates, admin, payment
 │   ├── services/                         # Business logic engines
 │   │   ├── DuplicateDetectionService.js  # Fuzzy match & duplicate prevention
 │   │   ├── OcrService.js                 # Gemini Vision OCR integration
+│   │   ├── adminService.js               # Multi-tenant account & deadline management
 │   │   └── parser/                       # WhatsAppParserEngine, NoiseFilter, BlockParser,
 │   │                                     # BlockSplitter, ShopParser, InMessageAnalyzer
 │   ├── package.json                      # Server dependencies & scripts
@@ -246,21 +287,25 @@ Saree_management/
 
 ---
 
+<a id="getting-started"></a>
 ## 🚀 Getting Started
 
+<a id="prerequisites"></a>
 ### Prerequisites
-* **Node.js**: v18.0.0 or later
+* **Node.js**: v18.0.0 or later (v20+ recommended)
 * **npm**: v9.0.0 or later
 * **Supabase Project**: Free or Pro tier PostgreSQL database
 * **Google Gemini API Key**: Obtainable from [Google AI Studio](https://aistudio.google.com/) for OCR and analytics
+* **SMTP Credentials** *(Optional)*: Gmail App Password or custom SMTP for B2B tax invoice email receipts
 
 ---
 
+<a id="backend-configuration"></a>
 ### Backend Configuration (`server/.env`)
 Create a `.env` file in the `server/` directory:
 
 ```env
-# Server Port (Default is 5001 to avoid Apple AirPlay receiver conflicts on 5000)
+# Server Port (Default is 5001 to avoid Apple AirPlay conflicts on 5000)
 PORT=5001
 NODE_ENV=development
 
@@ -277,16 +322,21 @@ JWT_SECRET=your-secure-jwt-secret-key-min-32-chars
 GEMINI_API_KEY=your-gemini-api-key-here
 GEMINI_OCR_MODEL=gemini-2.0-flash
 
+# SMTP Email Configuration for Tax Invoice Receipts (Optional; falls back to Ethereal sandbox)
+SMTP_SERVICE=gmail
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-gmail-app-password
+
 # CORS Whitelist (Optional in dev, required in prod)
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
 FRONTEND_URL=http://localhost:5173
 ```
 
-> [!CAUTION]
-> The `SUPABASE_SERVICE_ROLE_KEY` has full administrative database privileges and bypasses RLS. Never commit it to git or expose it in client code.
+> **Security Note:** The `SUPABASE_SERVICE_ROLE_KEY` has full administrative database privileges and bypasses RLS. Never commit it to git or expose it in client code.
 
 ---
 
+<a id="frontend-configuration"></a>
 ### Frontend Configuration (`client/.env`)
 Create a `.env` file in the `client/` directory:
 
@@ -301,6 +351,7 @@ VITE_API_URL=http://localhost:5001/api
 
 ---
 
+<a id="installation"></a>
 ### Installation
 
 Install dependencies across both `client` and `server` with one root command:
@@ -318,6 +369,7 @@ cd ..
 
 ---
 
+<a id="running-the-application"></a>
 ### Running the Application
 
 Launch both client and server concurrently in development mode:
@@ -338,6 +390,7 @@ npm run server  # Runs Express backend with node --watch
 
 ---
 
+<a id="database-schema"></a>
 ## 🗄 Database Schema & Migration Sequence
 
 For a new Supabase project, execute the SQL migration scripts in the **Supabase SQL Editor** in the following order:
@@ -357,21 +410,23 @@ For a new Supabase project, execute the SQL migration scripts in the **Supabase 
 7. **`database/multi_tenant_isolation_v2.sql`**  
    Configures Row-Level Security (RLS) policies for user data isolation.
 
+<a id="default-seed-accounts"></a>
 ### Default Seed Accounts
 *(Created automatically by `database/schema.sql`)*
 
 | Role | Username | Default Password | Access Scope |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin` | `admin123` | Full system access, users, settings, stock rollback, catalogs |
-| **Staff Member** | `staff` | `staff123` | Inventory updates, WhatsApp imports, stock requests, viewing |
+| **Super Admin** | `admin` | `admin123` | Platform console (`/admin/accounts`), tenant quotas, deadlines, global configs |
+| **Boutique User** | `staff` | `staff123` | Full inventory catalog, loom structures, WhatsApp import, stock requests |
 
-> [!IMPORTANT]
-> Immediately change default passwords upon initial deployment in production.
+> **Important:** Immediately change default passwords upon initial deployment in production.
 
 ---
 
+<a id="advanced-subsystems"></a>
 ## ⚙️ Advanced Subsystems
 
+<a id="subsystem-whatsapp-ocr"></a>
 ### 1. WhatsApp Text & Screenshot OCR Parser
 
 The WhatsApp parsing subsystem (`server/services/parser/`) is built on the principle: **Accuracy and traceability over blind automation**.
@@ -413,16 +468,20 @@ F-4 Blue 20
 
 ---
 
+<a id="subsystem-multi-shop"></a>
 ### 2. Multi-Shop Isolation (KP vs. KPR)
 
 Textile operations frequently run parallel collections under separate brands. The system natively partitions inventory:
-* Saree identity is strictly defined by:
-  $$\text{Identity} = \langle \text{owner\_id}, \text{brand (KP | KPR)}, \text{series\_base}, \text{series\_letter} \rangle$$
+* **Compound Tenant Identity**: Saree identity is strictly defined by the composite tuple:
+  ```text
+  Identity = ⟨ owner_id, brand (KP | KPR), series_base, series_letter ⟩
+  ```
 * Stock counts, history ledgers, and purchase orders are strictly partitioned.
 * The frontend provides an intuitive brand filter toggle (`All`, `KP`, `KPR`) across catalogs and analytics.
 
 ---
 
+<a id="subsystem-duplicate-detection"></a>
 ### 3. Duplicate Entry Detection & Protection
 
 Powered by `DuplicateDetectionService.js`:
@@ -432,6 +491,7 @@ Powered by `DuplicateDetectionService.js`:
 
 ---
 
+<a id="subsystem-audit-ledger"></a>
 ### 4. Audit Ledger, Rollback & Undo
 
 * Every modification is written to `stock_history` with full before-and-after snapshots.
@@ -440,6 +500,7 @@ Powered by `DuplicateDetectionService.js`:
 
 ---
 
+<a id="subsystem-supplier-crm"></a>
 ### 5. Supplier CRM & WhatsApp Purchase Orders
 
 * Links dye houses, yarn suppliers, and job workers to specific combination colors.
@@ -458,9 +519,55 @@ Powered by `DuplicateDetectionService.js`:
 
 ---
 
+<a id="subsystem-i18n"></a>
+### 6. Multi-Language Support (i18n)
+
+* Located in `client/src/i18n/translations.js` and managed through `LanguageContext.jsx`.
+* Provides complete translation dictionaries for **English**, **Gujarati (ગુજરાતી)**, and **Hindi (हिंदी)**.
+* Covers all core modules:
+  * Navigation, shop switchers, and metrics
+  * Saree forms, warp beam creation, and combination color labels
+  * Stock adjustment dialogs, audit logs, and status messages
+  * Billing usage, payment gateway, and invoice preview components
+
+---
+
+<a id="subsystem-billing-invoices"></a>
+### 7. Subscription Billing, Quota Meters & Tax Invoices
+
+Managed via `BillingUsage.jsx`, `subscriptionService.js`, and `server/routes/payment.js`:
+* **Tier Tracking**: Real-time quota progress meters monitoring:
+  * Catalog items against tier limits (e.g., 500 sarees on Pro, unlimited on Enterprise)
+  * Cloud photo storage capacity
+  * Active staff seats
+* **Payment Gateway Sandbox**:
+  * Authentic QR payment flow displaying official merchant UPI details (`client/public/upi-qr.jpeg`)
+  * Pre-populated card credentials (RuPay, Visa, Mastercard) with live 3D Secure OTP authentication
+* **Automated B2B Tax Invoice Email Dispatch**:
+  * Generates professional HTML tax invoices with GST calculations (18% split into CGST 9% and SGST 9%)
+  * Dispatches instant email receipts using Nodemailer (auto-creates Ethereal test inbox in test environments)
+  * Generates formatted WhatsApp executive thank-you message templates ready to dispatch
+
+---
+
+<a id="subsystem-super-admin"></a>
+### 8. Super Admin Platform Console
+
+Accessed at `/admin/accounts`:
+* Restricted to platform administrators (`isSuperAdmin`).
+* Displays a centralized registry of all organization accounts, active plan tiers, contact numbers, and expiration deadlines.
+* Interactive controls to:
+  * Upgrade or downgrade account tiers (`Starter`, `Pro`, `Enterprise`)
+  * Extend billing deadlines by +15, +30, or custom days
+  * Suspend or reactivate organization access
+  * Cancel subscriptions or resume active billing cycles
+
+---
+
+<a id="api-reference"></a>
 ## 🔌 REST API Endpoints Reference
 
-All endpoints (except public auth and health checks) require a valid JWT token passed in the `Authorization: Bearer <token>` header.
+All endpoints (except public auth, health checks, and webhooks) require a valid JWT token passed in the `Authorization: Bearer <token>` header.
 
 ### Authentication (`/api/auth`)
 | Method | Endpoint | Access | Description |
@@ -532,6 +639,23 @@ All endpoints (except public auth and health checks) require a valid JWT token p
 | `PATCH` | `/api/stock-requests/:id/status` | Admin / Staff | Update status (`PENDING`, `ORDERED`, `FULFILLED`) |
 | `DELETE`| `/api/stock-requests/:id` | Admin / Staff | Cancel/delete stock request |
 
+### Platform Super Admin (`/api/admin`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/admin/accounts` | Super Admin | List all tenant organization accounts and plan details |
+| `POST` | `/api/admin/accounts` | Super Admin | Create a new tenant account with plan assignment |
+| `PUT` | `/api/admin/accounts/:id/plan` | Super Admin | Update an account's subscription plan tier |
+| `POST` | `/api/admin/accounts/:id/extend` | Super Admin | Extend billing deadline by specified days |
+| `PUT` | `/api/admin/accounts/:id/status` | Super Admin | Toggle account status between ACTIVE and SUSPENDED |
+| `POST` | `/api/admin/accounts/:id/cancel` | Super Admin | Cancel account subscription |
+| `POST` | `/api/admin/accounts/:id/resume` | Super Admin | Resume canceled account subscription |
+
+### Payment & Invoicing (`/api/payment`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/payment/send-receipt` | Authenticated | Generate & email B2B Tax Invoice receipt via SMTP |
+| `POST` | `/api/payment/send-cancellation` | Authenticated | Send plan cancellation confirmation email notification |
+
 ### Dashboard & Analytics (`/api/dashboard`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
@@ -549,6 +673,7 @@ All endpoints (except public auth and health checks) require a valid JWT token p
 
 ---
 
+<a id="security-rls"></a>
 ## 🔒 Security, RLS & Rate Limiting
 
 * **Dual-Tier Rate Limiting**:
@@ -560,6 +685,7 @@ All endpoints (except public auth and health checks) require a valid JWT token p
 
 ---
 
+<a id="production-deployment"></a>
 ## 🚀 Production Deployment
 
 ### Deploying Frontend (Vercel)
@@ -576,11 +702,12 @@ The `client` directory contains a pre-configured `vercel.json` for client-side r
 1. Deploy the `server` directory as a Node.js web service.
 2. Build Command: `npm install`
 3. Start Command: `npm start`
-4. Configure all environment variables listed in [Backend Configuration](#backend-configuration-serverenv).
+4. Configure all environment variables listed in [Backend Configuration](#backend-configuration).
 5. Set `ALLOWED_ORIGINS` to your production frontend domain (e.g. `https://kp-creation.vercel.app`).
 
 ---
 
+<a id="license"></a>
 ## 📄 License
 
 This software is developed and maintained for **KP Creation** & **KPR Creation**. All rights reserved. Distributed under the ISC License.
