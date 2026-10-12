@@ -6,6 +6,9 @@
     "install:all": "npm install --prefix client && npm install --prefix server",
     "server": "npm run dev --prefix server",
     "client": "npm run dev --prefix client",
-    "dev": "npx concurrently \"npm run server\" \"npm run client\""
+    "dev": "npx concurrently \"npm run server\" \"npm run client\"",
+    "test": "npm run test --prefix server",
+    "lint": "npm run lint --prefix client",
+    "build": "npm run build --prefix client"
   }
 }
