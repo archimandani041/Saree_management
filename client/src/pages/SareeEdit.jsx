@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { sareeAPI, beamAPI, combinationAPI, parserAPI } from '../services/api';
 import CombinationImageUpload from '../components/common/CombinationImageUpload';
+import SupplierLinker from '../components/common/SupplierLinker';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Box, Paper, TextField, Button, Typography, Grid, IconButton,
@@ -101,7 +102,7 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, s
     setSaving(true);
     try {
       const { data } = await combinationAPI.update(combo.id, {
-        combination_name: `Combination ${comboIndex + 1}`,
+        combination_name: combo.combination_name?.trim() ? combo.combination_name.trim() : `Combination ${comboIndex + 1}`,
         current_stock: parseInt(combo.current_stock) || 0,
         minimum_stock: parseInt(combo.minimum_stock) || 20,
         notes: combo.notes,
@@ -216,6 +217,13 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, s
           <Button size="small" startIcon={<AddIcon />} onClick={addColor} disabled={saving} sx={{ mt: 0.5, mb: 1 }}>
             Add Color
           </Button>
+
+          {combo.id && (
+            <SupplierLinker
+              combinationId={combo.id}
+              combinationName={combo.combination_name?.trim() || `Combination ${comboIndex + 1}`}
+            />
+          )}
 
           {/* Save/Cancel actions */}
           {dirty && (

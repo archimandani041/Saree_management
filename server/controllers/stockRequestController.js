@@ -12,7 +12,7 @@ const getStockRequests = async (req, res) => {
 
     let query = supabase
       .from('stock_requests')
-      .select('*', { count: 'exact' })
+      .select('*, suppliers(id, name, company_name, mobile)', { count: 'exact' })
       .eq('owner_id', req.user.owner_id)
       .order('created_at', { ascending: false });
 
@@ -41,10 +41,10 @@ const getStockRequests = async (req, res) => {
 const createStockRequest = async (req, res) => {
   try {
     const {
-      saree_id, combination_id,
+      saree_id, combination_id, supplier_id,
       beam_name, combination_name, series_code,
       requested_qty, quantity, current_stock, minimum_stock,
-      whatsapp_message, notes, movement_type
+      whatsapp_message, notes, movement_type, status
     } = req.body;
 
     const targetQty = parseInt(requested_qty || quantity);
@@ -61,8 +61,6 @@ const createStockRequest = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-
-
     const isDelivery = movement_type === 'DELIVERY_OUT';
     const oldStock = combo.current_stock || 0;
     const newStock = isDelivery ? (oldStock - targetQty) : (oldStock + targetQty);
@@ -71,7 +69,6 @@ const createStockRequest = async (req, res) => {
     if (isDelivery && newStock < 0) {
       return res.status(400).json({ error: 'Delivery quantity cannot exceed available stock.' });
     }
-
 
     const userName = req.user.full_name || req.user.username;
 
@@ -102,6 +99,7 @@ const createStockRequest = async (req, res) => {
       .insert({
         saree_id: saree_id || null,
         combination_id,
+        supplier_id: supplier_id || null,
         beam_name: beam_name || null,
         combination_name: combination_name || null,
         series_code: series_code || null,
@@ -110,12 +108,12 @@ const createStockRequest = async (req, res) => {
         minimum_stock: parseInt(minimum_stock) || 20,
         whatsapp_message: whatsapp_message || null,
         notes: finalNotes,
-        status: 'Requested',
+        status: status || 'Requested',
         owner_id: req.user.owner_id,
         requested_by: req.user.id,
         requested_by_name: userName
       })
-      .select('*')
+      .select('*, suppliers(id, name, company_name, mobile)')
       .single();
 
     if (error) throw error;

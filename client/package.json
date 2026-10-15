@@ -48,6 +48,7 @@
     "react-router-dom": "^7.18.1",
     "react-to-print": "^3.3.0",
     "recharts": "^3.9.1",
+    "sari-stock-system": "file:..",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5"

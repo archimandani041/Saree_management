@@ -42,6 +42,7 @@ const navSections = [
     items: [
       { label: 'Low Stock', path: '/low-stock', icon: AlertTriangle, badge: '!' },
       { label: 'Stock Requests', path: '/stock-requests', icon: MessageCircle },
+      { label: 'Suppliers', path: '/suppliers', icon: Store },
       { label: 'Stock History', path: '/history', icon: History },
     ],
   },

@@ -33,10 +33,12 @@ const validateSaree = (req, res, next) => {
 };
 
 const validateStockUpdate = (req, res, next) => {
-  const { saree_id, action, quantity } = req.body;
+  const { saree_id, combination_id, action, quantity } = req.body;
   const errors = [];
 
-  if (!saree_id) errors.push('Saree ID is required');
+  if (!combination_id && !saree_id) {
+    errors.push('Combination ID or Saree ID is required');
+  }
   if (!action || !['Increase', 'Decrease', 'Manual Edit'].includes(action)) {
     errors.push('Valid action is required (Increase, Decrease, Manual Edit)');
   }

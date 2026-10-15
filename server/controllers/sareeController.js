@@ -173,7 +173,7 @@ const getSarees = async (req, res) => {
           combinations: (beam.combinations || [])
             .map(combo => ({
               ...combo,
-              combination_colors: (combo.combination_colors || []).sort((a, b) => (a.f_number || 0) - (b.f_number || 0))
+              combination_colors: (combo.combination_colors || []).sort((a, b) => naturalSort(a.f_number, b.f_number))
             }))
             .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.combination_name, b.combination_name))
         }))
@@ -192,7 +192,7 @@ const getSarees = async (req, res) => {
 
     // Status filter
     if (status === 'out') sarees = sarees.filter(s => s.total_stock === 0);
-    else if (status === 'low') sarees = sarees.filter(s => s.total_stock > 0 && s.has_low_stock_combo);
+    else if (status === 'low') sarees = sarees.filter(s => s.total_stock === 0 || s.has_low_stock_combo);
     else if (status === 'healthy') sarees = sarees.filter(s => s.total_stock > 0 && !s.has_low_stock_combo);
 
     // Sort by stock if needed
@@ -242,7 +242,7 @@ const getSareeById = async (req, res) => {
     saree.beams?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSortHelper(a.beam_name, b.beam_name));
     saree.beams?.forEach(beam => {
       beam.combinations?.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSortHelper(a.combination_name, b.combination_name));
-      beam.combinations?.forEach(c => c.combination_colors?.sort((a, b) => (a.f_number || 0) - (b.f_number || 0)));
+      beam.combinations?.forEach(c => c.combination_colors?.sort((a, b) => naturalSortHelper(a.f_number, b.f_number)));
     });
 
     const { data: history } = await supabase

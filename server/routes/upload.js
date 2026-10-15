@@ -9,13 +9,13 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// Saree-level image (admin only)
-router.post('/', authenticate, authorize('admin'), upload.single('image'), uploadImage);
+// Saree-level image (admin & staff)
+router.post('/', authenticate, authorize('admin', 'staff'), upload.single('image'), uploadImage);
 
 // Combination-level image upload
 router.post('/combination/:comboId', authenticate, authorize('admin', 'staff'), upload.single('image'), uploadCombinationImage);
 
 // Combination-level image delete
-router.delete('/combination/:comboId', authenticate, authorize('admin'), deleteCombinationImage);
+router.delete('/combination/:comboId', authenticate, authorize('admin', 'staff'), deleteCombinationImage);
 
 module.exports = router;

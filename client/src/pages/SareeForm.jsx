@@ -450,8 +450,9 @@ const SareeForm = () => {
         const code = (entry.series_code || '').toUpperCase();
         if (code && !processedCodes.has(code)) {
           processedCodes.add(code);
-          const { data } = await sareeAPI.getAll({ search: code });
-          const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === code);
+          const currentBrand = brand || 'KP';
+          const { data } = await sareeAPI.getAll({ search: code, brand: currentBrand });
+          const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === code && (!s.brand || s.brand === currentBrand));
           if (exactMatch) {
             existSareeCheckQueue.push({ seriesCode: code, sareeId: exactMatch.id, entry });
           }
@@ -605,8 +606,9 @@ const SareeForm = () => {
         const code = (entry.series_code || '').toUpperCase();
         if (code && !processedCodes.has(code)) {
           processedCodes.add(code);
-          const { data } = await sareeAPI.getAll({ search: code });
-          const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === code);
+          const currentBrand = brand || 'KP';
+          const { data } = await sareeAPI.getAll({ search: code, brand: currentBrand });
+          const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === code && (!s.brand || s.brand === currentBrand));
           if (exactMatch) {
             existSareeCheckQueue.push({
               seriesCode: code,
@@ -815,8 +817,9 @@ const SareeForm = () => {
       }
 
       if (shouldCheckDb) {
-        const { data } = await sareeAPI.getAll({ search: targetSeriesCode });
-        const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === targetSeriesCode);
+        const currentBrand = brand || 'KP';
+        const { data } = await sareeAPI.getAll({ search: targetSeriesCode, brand: currentBrand });
+        const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === targetSeriesCode && (!s.brand || s.brand === currentBrand));
         if (exactMatch) {
           setDupSeriesCode(targetSeriesCode);
           setDupSareeId(exactMatch.id);

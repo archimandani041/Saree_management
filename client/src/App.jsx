@@ -27,6 +27,7 @@ import LowStock from './pages/LowStock';
 import StockHistory from './pages/StockHistory';
 import Settings from './pages/Settings';
 import StockRequests from './pages/StockRequests';
+import Suppliers from './pages/Suppliers';
 
 /**
  * RootRoute:
@@ -85,6 +86,7 @@ const AppContent = () => {
                   <Route path="/low-stock" element={<LowStock />} />
                   <Route path="/history" element={<StockHistory />} />
                   <Route path="/stock-requests" element={<StockRequests />} />
+                  <Route path="/suppliers" element={<Suppliers />} />
 
                   {/* Admin & Staff Saree Mutations */}
                   <Route

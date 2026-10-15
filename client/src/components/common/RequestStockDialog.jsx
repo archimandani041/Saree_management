@@ -155,6 +155,7 @@ const RequestStockDialog = ({
           minimum_stock: combination?.minimum_stock ?? 20,
           whatsapp_message: message,
           movement_type: movementType,
+          status: isMachineDelivery ? 'Confirmed' : 'Received'
         });
       } catch (_) { /* non-critical */ }
 
