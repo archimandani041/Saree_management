@@ -350,7 +350,8 @@ const SareeForm = () => {
       const searchParam = uniqueCodes.join(' ');
       const { data } = await sareeAPI.getAll({ search: searchParam, limit: 200 });
       (data.sarees || []).forEach(s => {
-        existingNormalized.add(normalize(s.series_code));
+        if (s.series_code) existingNormalized.add(normalize(s.series_code));
+        if (s.series_base) existingNormalized.add(normalize(s.series_base));
       });
     } catch {
       // If DB check fails, proceed without filtering — don't block the import
@@ -447,11 +448,17 @@ const SareeForm = () => {
 
     try {
       for (const entry of entriesToCheck) {
-        const code = (entry.series_code || '').toUpperCase();
+        const rawCode = (entry.series_code || entry.series_base || '').toUpperCase();
+        const lm = rawCode.match(/^([A-Z]+\d+)[A-Z]?$/);
+        const code = lm ? lm[1] : rawCode;
         if (code && !processedCodes.has(code)) {
           processedCodes.add(code);
           const { data } = await sareeAPI.getAll({ search: code });
-          const exactMatch = (data.sarees || []).find(s => s.series_code.toUpperCase() === code);
+          const exactMatch = (data.sarees || []).find(s =>
+            (s.series_base && s.series_base.toUpperCase() === code) ||
+            (s.series_code && s.series_code.toUpperCase() === code) ||
+            (s.series_code && s.series_code.toUpperCase().startsWith(code))
+          );
           if (exactMatch) {
             existSareeCheckQueue.push({ seriesCode: code, sareeId: exactMatch.id, entry });
           }

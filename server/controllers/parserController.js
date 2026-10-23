@@ -117,11 +117,15 @@ const handleWhatsAppWebhook = async (req, res) => {
         continue;
       }
 
-      // 1. Find the Saree by series_code
+      // 1. Find the Saree by series_code or series_base (ignoring trailing letters like KS1020B -> KS1020)
+      const rawCode = (entry.series_code || entry.series_base || '').trim().toUpperCase();
+      const lm = rawCode.match(/^([A-Z]+\d+)[A-Z]?$/);
+      const baseCode = lm ? lm[1] : rawCode;
+
       const { data: sarees, error: sareeError } = await supabase
-        .from('sarees').select('id, series_code, sari_name')
+        .from('sarees').select('id, series_code, series_base, sari_name')
         .eq('owner_id', ownerId)
-        .ilike('series_code', entry.series_code.trim())
+        .or(`series_base.ilike.${baseCode},series_code.ilike.${rawCode},series_code.ilike.${baseCode}%`)
         .limit(1);
 
       if (sareeError) throw sareeError;

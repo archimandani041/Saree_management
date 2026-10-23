@@ -61,12 +61,12 @@ const isNoise = (line) => {
 };
 
 /**
- * Clean a raw line: strip emojis, extra whitespace, normalize.
+ * Clean a raw line: strip emojis, leading timestamps/senders, extra whitespace, normalize.
  * @param {string} line
  * @returns {string}
  */
 const cleanLine = (line) => {
-  return line
+  let cleaned = line
     .replace(
       /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu,
       ''
@@ -78,6 +78,17 @@ const cleanLine = (line) => {
     .replace(/[*•·]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+  // Strip leading WhatsApp timestamp and sender name prefix, e.g.:
+  // "[03/07, 11:49am] Daddy : White beam :" -> "White beam :"
+  // "[24/07, 5:17pm] Daddy : Black beam :" -> "Black beam :"
+  // "03/07/2024, 11:49 am - Daddy: White beam :" -> "White beam :"
+  cleaned = cleaned.replace(
+    /^(?:\[\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?,?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm)?\]|\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?,?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm)?\s*[-~])\s*[^:]+:\s*/i,
+    ''
+  ).trim();
+
+  return cleaned;
 };
 
 /**
