@@ -72,6 +72,7 @@ const parse = (lines) => {
     series_code: null,
     series_base: null,
     series_letter: null,
+    raw_code: null,
     combination_name: null,
     stock: null,
     isRelative: false,
@@ -103,6 +104,7 @@ const parse = (lines) => {
         entry.series_code = r.series_code;
         entry.series_base = r.series_base;
         entry.series_letter = r.series_letter;
+        entry.raw_code = r.raw_code;
         if (r.combination_name) entry.combination_name = r.combination_name;
         line = stripLeadSeparators(stripFirst(line, r.matchedText));
         if (!line) continue; // whole line was just the code

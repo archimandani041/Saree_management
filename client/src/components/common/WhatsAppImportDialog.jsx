@@ -110,13 +110,16 @@ const InlineEditRow = ({ entry, index, onUpdate }) => {
           sx={{ flex: '1 1 120px', minWidth: 100 }} />
         <TextField size="small" label="Series" value={local.series_code || ''}
           onChange={(e) => {
-            const code = e.target.value.toUpperCase();
-            const lm = code.match(/^([A-Z]+\d+)([A-Z])$/);
+            const raw = e.target.value.toUpperCase();
+            const lm = raw.match(/^([A-Z]+\d+)([A-Z])$/);
+            const base = lm ? lm[1] : raw;
+            const letter = lm ? lm[2] : 'A';
             setLocal({
               ...local,
-              series_code: code,
-              series_base: lm ? lm[1] : code,
-              series_letter: lm ? lm[2] : 'A',
+              series_code: base,
+              series_base: base,
+              series_letter: letter,
+              raw_code: raw,
             });
           }}
           sx={{ flex: '1 1 100px', minWidth: 80 }} />
@@ -351,7 +354,7 @@ const WhatsAppImportDialog = ({ open, onClose, onImport, currentSeriesBase, curr
     return entries
       .map((e, i) => ({ entry: e, index: i }))
       .filter(({ entry }) => {
-        const entryBase = (entry.series_base || '').trim().toUpperCase();
+        const entryBase = (entry.series_base || entry.series_code || '').trim().toUpperCase();
         return entryBase && entryBase !== base;
       });
   };
@@ -601,9 +604,10 @@ F-3 : Silver Filatex
                 <TableBody>
                   {entries.map((entry, idx) => {
                     const isChecked = selected.includes(idx);
+                    const entryBase = (entry.series_base || entry.series_code || '').toUpperCase();
                     const isMismatch = currentSeriesBase &&
-                      entry.series_base &&
-                      entry.series_base.toUpperCase() !== currentSeriesBase.toUpperCase();
+                      entryBase &&
+                      entryBase !== currentSeriesBase.toUpperCase();
                     const isLowConf = entry.confidence < 80;
                     const isDuplicate = !!entry.duplicate_in_message;
                     const isDifferent = !!entry.different_code;
@@ -636,13 +640,15 @@ F-3 : Silver Filatex
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4, alignItems: 'flex-start' }}>
-                            <Chip
-                              label={entry.series_code || '—'}
-                              size="small"
-                              variant="outlined"
-                              color={isMismatch || isDifferent ? 'error' : 'default'}
-                              sx={{ fontWeight: 700, fontSize: '0.7rem' }}
-                            />
+                            <Tooltip title={entry.raw_code && entry.raw_code !== entry.series_code ? `Raw: ${entry.raw_code}` : ''}>
+                              <Chip
+                                label={entry.series_code || '—'}
+                                size="small"
+                                variant="outlined"
+                                color={isMismatch || isDifferent ? 'error' : 'default'}
+                                sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+                              />
+                            </Tooltip>
                             {entry.brand && (
                               <Tooltip title={`Shop: ${entry.brand}`}>
                                 <Chip label={entry.brand} size="small"

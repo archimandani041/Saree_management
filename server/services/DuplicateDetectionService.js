@@ -50,14 +50,19 @@ const colorSimilarity = (existingColors = [], incomingColors = []) => {
 // LEVEL 1 – Saree duplicate check
 // ─────────────────────────────────────────────────────────────────────────────
 /**
- * @returns {{ isDuplicate: boolean, existingId?: string, existingCode?: string }}
+ * @returns {{ isDuplicate: boolean, existingId?: string, existingCode?: string, existingBase?: string }}
  */
 const checkSaree = async (seriesCode, ownerId, excludeId = null, brand = null) => {
+  const cleanCode = (seriesCode || '').trim().toUpperCase();
+  // Strip any trailing letter after digits (e.g. KS1020B -> KS1020, like KS123)
+  const lm = cleanCode.match(/^([A-Z]+\d+)[A-Z]?$/);
+  const baseCode = lm ? lm[1] : cleanCode;
+
   let q = supabase
     .from('sarees')
-    .select('id, series_code, sari_name, brand')
+    .select('id, series_code, series_base, sari_name, brand')
     .eq('owner_id', ownerId)
-    .ilike('series_code', seriesCode.trim().toUpperCase())
+    .or(`series_base.ilike.${baseCode},series_code.ilike.${cleanCode},series_code.ilike.${baseCode}%`)
     .limit(1);
   // Shop isolation: a KP sari is only a duplicate of another KP sari, never KPR.
   if (brand) q = q.eq('brand', brand);
@@ -65,7 +70,14 @@ const checkSaree = async (seriesCode, ownerId, excludeId = null, brand = null) =
 
   const { data } = await q;
   if (data?.length > 0) {
-    return { isDuplicate: true, existingId: data[0].id, existingCode: data[0].series_code, existingName: data[0].sari_name, existingBrand: data[0].brand };
+    return {
+      isDuplicate: true,
+      existingId: data[0].id,
+      existingCode: data[0].series_code,
+      existingBase: data[0].series_base,
+      existingName: data[0].sari_name,
+      existingBrand: data[0].brand,
+    };
   }
   return { isDuplicate: false };
 };
@@ -291,14 +303,15 @@ const checkWhatsAppBatch = async (entries, ownerId, brand = null) => {
     const hasColors = (entry.colors || []).length > 0;
 
     // ── Unrecognisable / missing identity ────────────────────────────────────
-    if (!entry.series_code) {
+    const codeToCheck = entry.series_base || entry.series_code;
+    if (!codeToCheck) {
       result.status = (hasColors || entry.beam_name || entry.stock != null) ? 'MISSING_INFO' : 'INVALID';
       results.push(result);
       continue;
     }
 
     // ── L1: Saree existence (shop-scoped) ────────────────────────────────────
-    const sareeCheck = await checkSaree(entry.series_code, ownerId, null, entryBrand);
+    const sareeCheck = await checkSaree(codeToCheck, ownerId, null, entryBrand);
     if (!sareeCheck.isDuplicate) {
       result.db_status = 'NEW_SARI';
       result.status = entry.duplicate_in_message ? 'DUPLICATE_IN_MESSAGE' : 'NEW_SARI';
